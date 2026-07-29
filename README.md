@@ -35,12 +35,22 @@ fiscales, no la estructura del documento.
 No hay escalón caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está —
 y eso se reporta, no se inventa.
 
-## Relación con `pdfstar`
+## Alcance — y lo que queda fuera a propósito
 
-`ubl-star` es el camino exacto; [`pdfstar`](https://github.com/CSalcedoDataBI/pdfstar) es el camino
-degradado para cuando solo hay un PDF (emisor extranjero, factura anterior a la obligatoriedad,
-escaneo suelto). Comparten el contrato de datos y el modelo dimensional a propósito: **la salida de
-ambos debe ser indistinguible aguas abajo.**
+`ubl-star` lee **XML**. Si lo que tienes es un PDF escaneado, una foto o un PDF sin adjunto, esta no
+es tu herramienta: la lectura óptica es otro problema, con otro costo, otra tasa de error y otra
+forma de auditarse. **Mezclar los dos caminos es lo que hace que un extractor de facturas no se pueda
+verificar** — cuando un campo puede venir de una ruta exacta del estándar o de un modelo que lo
+adivinó, ya no sabes cuál de las dos ocurrió.
+
+Aquí solo pasa lo primero. Un campo que no está en el XML se reporta ausente.
+
+## El contrato de salida
+
+Las tablas, las columnas y las claves que produce `ubl-star` están declaradas en un **contrato
+versionado**, y hay un test que ancla la salida a ese documento. La razón es que otra herramienta
+—leyendo otra fuente— pueda entregar exactamente el mismo modelo y ser intercambiable aguas abajo,
+sin compartir una línea de código con esta.
 
 ## Licencia
 
