@@ -41,6 +41,16 @@ def test_total_dentro_de_la_tolerancia_cuadra() -> None:
     assert factura.cuadra()
 
 
+def test_total_a_exactamente_la_tolerancia_cuadra() -> None:
+    """El documento dice 'dentro de una tolerancia de 0.02': el borde exacto cuadra.
+
+    La comparacion en `problemas()` es `>`, no `>=`, asi que una diferencia de
+    exactamente TOLERANCIA debe aceptarse, no reportarse.
+    """
+    factura = Invoice(subtotal="100.00", impuesto_total="19.00", total="119.02")
+    assert factura.cuadra()
+
+
 def test_vencimiento_anterior_a_la_emision_se_reporta() -> None:
     factura = Invoice(fecha_emision=date(2026, 3, 24), fecha_vencimiento=date(2026, 3, 1))
     assert [p.campo for p in factura.problemas()] == ["fecha_vencimiento"]
@@ -59,6 +69,16 @@ def test_linea_que_no_cuadra_se_reporta_con_su_indice_humano() -> None:
 def test_una_linea_incompleta_no_es_una_incoherencia() -> None:
     """Un hueco es un campo que nadie leyo, no un descuadre."""
     assert InvoiceLine(cantidad="1", importe="10.00").problemas() == []
+
+
+def test_una_factura_incompleta_no_es_una_incoherencia() -> None:
+    """La misma regla, a nivel cabecera: falta impuesto_total, no hay con que comparar.
+
+    Si estan subtotal y total pero falta impuesto_total, no hay problema de
+    total que reportar: es un campo que nadie leyo, no un descuadre.
+    """
+    factura = Invoice(subtotal="100.00", total="119.00")
+    assert [p.campo for p in factura.problemas()] == []
 
 
 def test_un_campo_ausente_es_none_no_cero() -> None:
