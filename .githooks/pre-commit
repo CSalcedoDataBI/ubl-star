@@ -5,26 +5,28 @@
 # cedula, direccion, correo y CUDE de personas reales. Las fixtures son
 # sinteticas y se generan por codigo, asi que un documento fuera de
 # tests/fixtures/ solo puede ser real.
+#
+# Instalar:  git config core.hooksPath .githooks
+# Git NO lee .githooks/ por su cuenta: sin ese config el hook no se ejecuta.
+#
+# El filtro va por `grep -Ei` sobre la lista de rutas, no por un `case` dentro
+# de un `for`. El `case` compara literal, asi que `factura.Xml` no casaba con
+# `*.xml` ni con `*.XML` y se colaba; y `for x in $(...)` parte los nombres que
+# llevan espacios. Leyendo linea a linea, ambos casos caen.
 
-fallo=0
+bloqueados=$(git diff --cached --name-only --diff-filter=A |
+  grep -Ei '\.(xml|zip|pdf|png|jpe?g|tiff?)$' |
+  grep -v '^tests/fixtures/')
 
-for archivo in $(git diff --cached --name-only --diff-filter=A); do
-    case "$archivo" in
-        tests/fixtures/*)
-            continue
-            ;;
-        *.xml|*.XML|*.zip|*.ZIP|*.pdf|*.PDF|*.png|*.PNG|*.jpg|*.JPG|*.jpeg|*.JPEG)
-            echo "BLOQUEADO: $archivo — documento fuera de tests/fixtures/"
-            fallo=1
-            ;;
-    esac
-done
-
-if [ "$fallo" -ne 0 ]; then
-    echo ""
-    echo "Las facturas reales no se versionan. Las fixtures son sinteticas y"
-    echo "viven en tests/fixtures/. Si esto es una fixture, muevela alli."
-    exit 1
+if [ -n "$bloqueados" ]; then
+  echo "BLOQUEADO: documentos fuera de tests/fixtures/ (facturas reales?):"
+  echo "$bloqueados" | sed 's/^/  /'
+  echo ""
+  echo "Las facturas reales no se versionan. Las fixtures son sinteticas y"
+  echo "viven en tests/fixtures/. Si esto es una fixture, muevela alli."
+  echo ""
+  echo "Si de verdad sabes lo que haces: git commit --no-verify"
+  exit 1
 fi
 
 exit 0
