@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ubl-star"
+version = "0.1.0"
+description = "De factura electronica UBL 2.1 a hechos listos para analizar."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Cristobal Salcedo", email = "support@pesanteanalytics.com" }]
+keywords = ["invoice", "ubl", "dian", "peppol", "star-schema", "parquet"]
+
+# Solo licencias permisivas, igual que pdfstar. Nada AGPL/GPL.
+dependencies = [
+    "pydantic>=2.7",      # MIT — contratos de datos
+    "defusedxml>=0.7",    # PSF — parseo XML sin XXE ni billion-laughs
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    # CLAVADA, no `>=`: es un verificador cuyo veredicto cambia con la version.
+    # Mismo criterio que pdfstar — si el hook local y el CI corren versiones
+    # distintas, "verde en local" deja de significar nada.
+    "ruff==0.15.4",
+    "mypy>=1.11",
+    "pyyaml>=6",          # MIT — lee el bloque declarativo del contrato en el test
+]
+
+[project.urls]
+Homepage = "https://csalcedodatabi.com/"
+Repository = "https://github.com/CSalcedoDataBI/ubl-star"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ubl_star"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+# Sin este plugin, mypy no ve `populate_by_name=True` y exige el alias
+# (linea_descripcion) en vez del nombre de campo (descripcion) al construir.
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "defusedxml.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
