@@ -1,0 +1,30 @@
+#!/bin/sh
+# Barrera anti-contaminacion: ningun documento real entra a este repo publico.
+#
+# Aqui el archivo peligroso es el XML: una factura DIAN lleva nombre, NIT,
+# cedula, direccion, correo y CUDE de personas reales. Las fixtures son
+# sinteticas y se generan por codigo, asi que un documento fuera de
+# tests/fixtures/ solo puede ser real.
+
+fallo=0
+
+for archivo in $(git diff --cached --name-only --diff-filter=A); do
+    case "$archivo" in
+        tests/fixtures/*)
+            continue
+            ;;
+        *.xml|*.XML|*.zip|*.ZIP|*.pdf|*.PDF|*.png|*.PNG|*.jpg|*.JPG|*.jpeg|*.JPEG)
+            echo "BLOQUEADO: $archivo — documento fuera de tests/fixtures/"
+            fallo=1
+            ;;
+    esac
+done
+
+if [ "$fallo" -ne 0 ]; then
+    echo ""
+    echo "Las facturas reales no se versionan. Las fixtures son sinteticas y"
+    echo "viven en tests/fixtures/. Si esto es una fixture, muevela alli."
+    exit 1
+fi
+
+exit 0

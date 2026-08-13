@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Datos reales — nunca. Las fixtures sinteticas de tests/fixtures/ estan exceptuadas
+# abajo; todo lo demas queda fuera aunque alguien lo escriba por error.
+*.xml
+*.zip
+*.pdf
+!tests/fixtures/**/*.xml
+!tests/fixtures/**/*.zip
+
+# Scratch space de la ejecucion agentica — no se versiona.
+.superpowers/
