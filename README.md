@@ -9,7 +9,8 @@ fuente: **100% de precisión, cero OCR, cero tokens, cero modelo.**
 `ubl-star` toma ese XML y entrega `dim_proveedor`, `dim_fecha`, `dim_item` y `fact_factura_linea` en
 Parquet, listos para un Lakehouse.
 
-> Estado: recién iniciado. El diseño se está escribiendo.
+> Estado: lee el ZIP del adjunto, localiza el XML y lo parsea al contrato de salida versionado.
+> El modelo dimensional en Parquet es el siguiente paso.
 
 ## Por qué existe
 
@@ -51,6 +52,78 @@ Las tablas, las columnas y las claves que produce `ubl-star` están declaradas e
 versionado**, y hay un test que ancla la salida a ese documento. La razón es que otra herramienta
 —leyendo otra fuente— pueda entregar exactamente el mismo modelo y ser intercambiable aguas abajo,
 sin compartir una línea de código con esta.
+
+## Desarrollo
+
+```bash
+git config core.hooksPath .githooks   # obligatorio: barrera anti-contaminación
+pip install -e ".[dev]"
+pytest
+```
+
+El primer comando no es cosmético. Este repo es **público** y el hook es lo único que impide que una
+factura real —con nombre, NIT, cédula, dirección y CUDE de personas de verdad— entre al historial.
+**Git no lee `.githooks/` por su cuenta:** sin ese `git config`, el archivo está ahí y nadie lo
+llama. Y en un repo público la fuga no se deshace — un `git rm` posterior no la saca del historial
+que ya se clonó.
+
+Las fixtures son sintéticas y se generan por código (`tests/fixtures/generar.py`). Es lo que permite
+que el hook sea tajante: si un documento aparece fuera de `tests/fixtures/`, solo puede ser real.
+
+### Verificación manual del hook
+
+Tras tocar `.githooks/pre-commit`, confirma **dos cosas distintas**: que git puede ejecutarlo, y que
+hace lo suyo. Fallan por separado, y comprobar lo segundo no detecta lo primero.
+
+**1. Que está instalado y es ejecutable.** Git solo ejecuta hooks que llevan el bit de ejecución. Si
+falta, en Linux y macOS el hook se omite **en silencio** — sin error, sin aviso, commit aceptado:
+
+```bash
+git config core.hooksPath              # no debe salir vacío; apunta a .githooks
+git ls-files -s .githooks/pre-commit   # el modo debe ser 100755, no 100644
+```
+
+Si sale `100644`, el hook está muerto fuera de Windows y se revive así:
+
+```bash
+git update-index --chmod=+x .githooks/pre-commit
+```
+
+**2. Que git lo dispara de verdad.** Un `git commit` real —no `sh`— sobre un caso que debe fallar.
+No commitea nada, precisamente porque el hook lo rechaza:
+
+```bash
+touch factura-real.xml
+git add -f factura-real.xml
+git commit -m "prueba"      # BLOQUEADO + exit 1. Si el commit PASA, el hook no se está ejecutando.
+git restore --staged factura-real.xml && rm factura-real.xml
+```
+
+**3. Que la lógica cubre cada caso.** Aquí sí conviene invocar el script directo: es rápido y el
+caso que *pasa* no acaba commiteando nada por error. Los `-f` fuerzan el paso del `.gitignore`, que
+es justo lo que el hook debe interceptar:
+
+```bash
+touch factura-real.xml factura.Xml
+git add -f factura-real.xml && sh .githooks/pre-commit   # BLOQUEADO: XML fuera de fixtures
+git reset
+git add -f factura.Xml      && sh .githooks/pre-commit   # BLOQUEADO: mayúscula mixta también cuenta
+git reset
+mkdir -p tests/fixtures && touch tests/fixtures/sintetica.xml
+git add -f tests/fixtures/sintetica.xml && sh .githooks/pre-commit  # pasa: fixture sintética
+git reset
+rm factura-real.xml factura.Xml tests/fixtures/sintetica.xml
+```
+
+`factura.Xml` cubre una regresión concreta, y la mayúscula mixta es deliberada. El filtro comparaba
+extensiones literales (`*.xml|*.XML`), así que `.xml` y `.XML` se bloqueaban pero **`.Xml` entraba
+sin más**. Un `.ZIP` en mayúscula no sirve como caso de prueba: ese sí estaba en la lista. Lo que se
+colaba era justo lo que ninguna de las dos variantes escritas contemplaba.
+
+El paso 1 no sobra teniendo el 2: en Windows el bit de modo ni se consulta y los hooks corren igual,
+así que el paso 2 se ve idéntico con `100644` y con `100755`. El `git ls-files` es la única
+comprobación que ve el fallo desde cualquier plataforma — y es un fallo real, no hipotético: le pasó
+a `pdfstar`, donde el hook estuvo meses sin efecto en Linux y macOS sin que nada lo delatara.
 
 ## Licencia
 
