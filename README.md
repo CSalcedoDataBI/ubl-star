@@ -6,11 +6,21 @@ Donde la factura electrónica es obligatoria, el documento legal **no es el PDF:
 es su representación gráfica — una foto del original. Leer el XML no es una optimización, es leer la
 fuente: **100% de precisión, cero OCR, cero tokens, cero modelo.**
 
-`ubl-star` toma ese XML y entrega `dim_proveedor`, `dim_fecha`, `dim_item` y `fact_factura_linea` en
-Parquet, listos para un Lakehouse.
+`ubl-star` toma ese XML y devuelve la **factura canónica** —emisor, receptor, líneas, impuestos y
+totales— conforme a un [contrato de salida versionado](docs/contrato/factura-v1.md).
 
-> Estado: lee el ZIP del adjunto, localiza el XML y lo parsea al contrato de salida versionado.
-> El modelo dimensional en Parquet es el siguiente paso.
+> ### Estado — léelo antes de instalar
+>
+> Hoy `ubl-star` es una **librería**: abre el ZIP del adjunto, localiza el XML dentro y lo parsea al
+> contrato. Eso funciona y está probado.
+>
+> Lo que **todavía no existe**: no hay CLI, y no hay escritura a Parquet ni a CSV. El esquema
+> estrella (`dim_proveedor`, `dim_fecha`, `dim_item`, `fact_factura_linea`) es la meta del proyecto,
+> no algo que ya puedas ejecutar — va en
+> [#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6).
+>
+> El perfil probado es el de la **DIAN**. PEPPOL / EN 16931 va en
+> [#5](https://github.com/CSalcedoDataBI/ubl-star/issues/5).
 
 ## Por qué existe
 
@@ -23,18 +33,22 @@ venía resuelto en el adjunto.
 - **Europa (PEPPOL / EN 16931)** — el mismo UBL 2.1 como sintaxis de la factura electrónica
   transfronteriza.
 
-Un solo parser cubre ambos. Lo que cambia entre jurisdicciones son las extensiones y los campos
-fiscales, no la estructura del documento.
+Un solo parser cubre ambos: lo que cambia entre jurisdicciones son las extensiones y los campos
+fiscales, no la estructura del documento. Es la tesis del proyecto, y por ahora está comprobada
+**solo del lado DIAN** — las fixtures PEPPOL que la pondrían a prueba son
+[#5](https://github.com/CSalcedoDataBI/ubl-star/issues/5).
 
 ## Cómo funciona
 
-1. **Entrada** — un XML UBL 2.1, o el ZIP del adjunto que lo contiene.
-2. **Parseo** — sin adivinar: cada campo sale de su ruta en el estándar.
-3. **Mapeo** — al contrato de factura canónico (emisor, receptor, líneas, impuestos, totales).
-4. **Modelo** — esquema estrella → Parquet / CSV.
+1. **Entrada** — un XML UBL 2.1, o el ZIP del adjunto que lo contiene. ✅
+2. **Parseo** — sin adivinar: cada campo sale de su ruta en el estándar. ✅
+3. **Mapeo** — al contrato de factura canónico (emisor, receptor, líneas, impuestos, totales). ✅
+4. **Modelo** — esquema estrella → Parquet / CSV. ⬜ *pendiente,
+   [#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6)*
 
-No hay escalón caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está —
-y eso se reporta, no se inventa.
+Los tres primeros pasos están implementados y probados; el cuarto es el que falta. No hay escalón
+caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está — y eso se
+reporta, no se inventa.
 
 ## Alcance — y lo que queda fuera a propósito
 
@@ -48,10 +62,14 @@ Aquí solo pasa lo primero. Un campo que no está en el XML se reporta ausente.
 
 ## El contrato de salida
 
-Las tablas, las columnas y las claves que produce `ubl-star` están declaradas en un **contrato
+Los campos, los tipos y las reglas de nulos que produce `ubl-star` están declarados en un **contrato
 versionado**, y hay un test que ancla la salida a ese documento. La razón es que otra herramienta
 —leyendo otra fuente— pueda entregar exactamente el mismo modelo y ser intercambiable aguas abajo,
 sin compartir una línea de código con esta.
+
+El contrato v1 declara la factura canónica: `invoice` e `invoice_line`. Las tablas del esquema
+estrella todavía no están declaradas en él — llegarán con
+[#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6), que es lo que las hará existir.
 
 ## Desarrollo
 
