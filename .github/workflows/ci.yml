@@ -1,0 +1,124 @@
+name: CI
+
+# El gate va en pull_request. `push: main` corre tambien porque a veces se
+# mergea con bypass de administrador: sin el, esos cambios no los verifica
+# nadie. No se duplican -- un push a rama con PR abierto solo dispara
+# pull_request.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Sin `paths-ignore` a proposito. El ahorro seria cero (repo publico = minutos
+# gratis) y abre una trampa real: si este check se vuelve obligatorio, un PR que
+# toque solo rutas ignoradas no dispara el workflow, el check nunca reporta y la
+# PR se queda esperando un estado que no va a llegar.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux es donde se rompe lo que Windows tapa (un hook sin bit de
+        # ejecucion, los finales de linea, las rutas). Windows es donde se
+        # desarrolla. Hacen falta los dos.
+        os: [ubuntu-latest, windows-latest]
+        # La minima que declara pyproject y la que se usa a diario. Probar solo
+        # la de diario seria declarar un soporte que nadie verifica.
+        python: ["3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: python -m ruff check src tests
+
+      - name: Types (mypy --strict)
+        run: python -m mypy src
+
+      - name: Tests
+        run: python -m pytest -q
+
+  hook:
+    # La barrera anti-contaminacion es lo unico que impide que una factura real
+    # entre a un repo publico, y su fallo es silencioso: git omite un hook no
+    # ejecutable sin decir nada. En Windows el bit de modo ni se consulta, asi
+    # que este job es la unica comprobacion que puede verlo de verdad.
+    name: barrera anti-contaminacion
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: El hook es ejecutable
+        run: |
+          modo=$(git ls-files -s .githooks/pre-commit | cut -d' ' -f1)
+          echo "modo en el indice: $modo"
+          if [ "$modo" != "100755" ]; then
+            echo "FALLO: el hook esta en $modo. Git omite en silencio un hook sin bit de ejecucion:"
+            echo "       en Linux y macOS la barrera no existiria. Arreglo:"
+            echo "       git update-index --chmod=+x .githooks/pre-commit"
+            exit 1
+          fi
+          test -x .githooks/pre-commit || { echo "FALLO: sin permiso de ejecucion en el arbol"; exit 1; }
+
+      - name: Git lo dispara, y bloquea un documento real
+        run: |
+          git config user.email "ci@github.actions"
+          git config user.name "CI"
+          git config core.hooksPath .githooks
+
+          # Un `git commit` de verdad, no `sh .githooks/pre-commit`: invocar el
+          # script a mano prueba su logica pero no que git llegue a llamarlo, que
+          # es justo la mitad que fallaba.
+          touch factura-real.xml
+          git add -f factura-real.xml
+          if git commit -m "debe ser rechazado"; then
+            echo "FALLO: el hook dejo pasar un XML fuera de tests/fixtures/"
+            exit 1
+          fi
+          git restore --staged factura-real.xml && rm factura-real.xml
+          echo "OK: bloqueado"
+
+      - name: Y bloquea la mayuscula mixta
+        run: |
+          git config core.hooksPath .githooks
+          # Regresion concreta: el filtro comparaba `*.xml|*.XML` literalmente,
+          # asi que `.Xml` se colaba entero.
+          touch factura.Xml
+          git add -f factura.Xml
+          if git commit -m "debe ser rechazado"; then
+            echo "FALLO: el hook dejo pasar factura.Xml (mayuscula mixta)"
+            exit 1
+          fi
+          git restore --staged factura.Xml && rm factura.Xml
+          echo "OK: bloqueado"
+
+      - name: Pero deja pasar una fixture sintetica
+        run: |
+          git config core.hooksPath .githooks
+          mkdir -p tests/fixtures
+          touch tests/fixtures/sintetica.xml
+          git add -f tests/fixtures/sintetica.xml
+          if ! git commit -m "debe pasar"; then
+            echo "FALLO: el hook bloqueo una fixture legitima -- la barrera esta de mas y estorba"
+            exit 1
+          fi
+          echo "OK: pasa"
