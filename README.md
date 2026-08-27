@@ -1,5 +1,11 @@
 # ubl-star
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img src="docs/assets/banner-light.svg"
+       alt="ubl-star: de factura electronica UBL 2.1 a hechos listos para analizar.">
+</picture>
+
 **De factura electrónica UBL 2.1 a hechos listos para analizar.**
 
 Donde la factura electrónica es obligatoria, el documento legal **no es el PDF: es el XML**. El PDF
