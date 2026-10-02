@@ -102,6 +102,8 @@ class Invoice(_Base):
     subtotal: Dinero | None = None
     impuesto_total: Dinero | None = None
     total: Dinero | None = None
+    descuento_total: Dinero | None = None
+    cargo_total: Dinero | None = None
     orden_compra: str | None = None
     tipo_documento: TipoDocumento | None = None
 
@@ -112,17 +114,9 @@ class Invoice(_Base):
         encontrados: list[Problema] = []
 
         if self.subtotal is not None and self.impuesto_total is not None and self.total is not None:
-            esperado = self.subtotal + self.impuesto_total
-            if abs(self.total - esperado) > TOLERANCIA:
-                encontrados.append(
-                    Problema(
-                        campo="total",
-                        detalle=(
-                            f"{self.total} no cuadra con subtotal + impuesto_total "
-                            f"({self.subtotal} + {self.impuesto_total} = {esperado})"
-                        ),
-                    )
-                )
+            problema = self._problema_total(self.subtotal, self.impuesto_total, self.total)
+            if problema is not None:
+                encontrados.append(problema)
 
         if self.fecha_emision and self.fecha_vencimiento:
             if self.fecha_vencimiento < self.fecha_emision:
@@ -142,6 +136,35 @@ class Invoice(_Base):
                 encontrados.append(Problema(campo=f"lineas[{i}].{p.campo}", detalle=p.detalle))
 
         return encontrados
+
+    def _problema_total(
+        self, subtotal: Decimal, impuesto: Decimal, total: Decimal
+    ) -> Problema | None:
+        """El total cumple la identidad DIAN o, si hay descuentos o cargos de
+        documento, la de EN 16931. Las dos son del estandar.
+
+        - DIAN: `total = subtotal + impuesto`. Los descuentos solo restan en lo
+          pagadero.
+        - EN 16931 (BT-112): `total = subtotal - descuento_total + cargo_total +
+          impuesto`. El total con impuestos ya los descuenta.
+        """
+        dian = subtotal + impuesto
+        if abs(total - dian) <= TOLERANCIA:
+            return None
+        detalle = (
+            f"{total} no cuadra con subtotal + impuesto_total ({subtotal} + {impuesto} = {dian})"
+        )
+        if self.descuento_total is not None or self.cargo_total is not None:
+            descuento = self.descuento_total or Decimal(0)
+            cargo = self.cargo_total or Decimal(0)
+            en16931 = subtotal - descuento + cargo + impuesto
+            if abs(total - en16931) <= TOLERANCIA:
+                return None
+            detalle += (
+                " ni con subtotal - descuento_total + cargo_total + impuesto_total "
+                f"({subtotal} - {descuento} + {cargo} + {impuesto} = {en16931})"
+            )
+        return Problema(campo="total", detalle=detalle)
 
     def cuadra(self) -> bool:
         """Atajo legible para el camino feliz."""

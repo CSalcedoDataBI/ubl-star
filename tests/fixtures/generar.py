@@ -292,6 +292,47 @@ def construir_peppol_credit_note() -> str:
     )
 
 
+def construir_peppol_invoice_descuento() -> str:
+    """La factura PEPPOL con un descuento de documento de 100 (BT-92).
+
+    En EN 16931 el descuento ya resta en TaxExclusiveAmount (BT-109 = 1000 - 100
+    = 900) y por tanto en TaxInclusiveAmount (BT-112 = 900 + 189 = 1089). Es la
+    forma que la identidad `total = subtotal + impuesto` de la DIAN no cubre.
+    """
+    return (
+        _PEPPOL_INVOICE.replace("<cbc:ID>INV-0001</cbc:ID>", "<cbc:ID>INV-0002</cbc:ID>", 1)
+        .replace(
+            "<cac:TaxTotal>",
+            "<cac:AllowanceCharge><cbc:ChargeIndicator>false</cbc:ChargeIndicator>"
+            "<cbc:AllowanceChargeReason>EXAMPLE DISCOUNT</cbc:AllowanceChargeReason>"
+            '<cbc:Amount currencyID="EUR">100.00</cbc:Amount>'
+            "<cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent>"
+            "<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>"
+            "</cac:AllowanceCharge><cac:TaxTotal>",
+            1,
+        )
+        .replace(">210.00</cbc:TaxAmount>", ">189.00</cbc:TaxAmount>")
+        .replace(
+            '<cbc:TaxableAmount currencyID="EUR">1000.00</cbc:TaxableAmount>',
+            '<cbc:TaxableAmount currencyID="EUR">900.00</cbc:TaxableAmount>',
+        )
+        .replace(
+            '<cbc:TaxExclusiveAmount currencyID="EUR">1000.00</cbc:TaxExclusiveAmount>',
+            '<cbc:TaxExclusiveAmount currencyID="EUR">900.00</cbc:TaxExclusiveAmount>',
+        )
+        .replace(
+            '<cbc:TaxInclusiveAmount currencyID="EUR">1210.00</cbc:TaxInclusiveAmount>',
+            '<cbc:TaxInclusiveAmount currencyID="EUR">1089.00</cbc:TaxInclusiveAmount>'
+            '<cbc:AllowanceTotalAmount currencyID="EUR">100.00</cbc:AllowanceTotalAmount>'
+            '<cbc:ChargeTotalAmount currencyID="EUR">0.00</cbc:ChargeTotalAmount>',
+        )
+        .replace(
+            '<cbc:PayableAmount currencyID="EUR">1210.00</cbc:PayableAmount>',
+            '<cbc:PayableAmount currencyID="EUR">1089.00</cbc:PayableAmount>',
+        )
+    )
+
+
 def _nota_credito_dian() -> str:
     return construir_adjunto_nota("CreditNote")
 
@@ -308,6 +349,7 @@ FIXTURES: dict[str, Callable[[], str]] = {
     "dian_nota_debito.xml": _nota_debito_dian,
     "peppol_invoice.xml": construir_peppol_invoice,
     "peppol_credit_note.xml": construir_peppol_credit_note,
+    "peppol_invoice_descuento.xml": construir_peppol_invoice_descuento,
 }
 
 GOLDEN = AQUI / "golden"

@@ -10,7 +10,11 @@ from decimal import Decimal
 
 import pytest
 
-from tests.fixtures.generar import construir_peppol_credit_note, construir_peppol_invoice
+from tests.fixtures.generar import (
+    construir_peppol_credit_note,
+    construir_peppol_invoice,
+    construir_peppol_invoice_descuento,
+)
 from ubl_star.parser import desanidar, parsear
 from ubl_star.schema import Invoice
 
@@ -93,3 +97,23 @@ def test_la_nota_credito_peppol(nota: Invoice) -> None:
         "cufe": None,
         "fecha_emision": date(2026, 3, 2),
     }
+
+
+# --- Descuento de documento (issue #21) --------------------------------------
+
+
+@pytest.fixture
+def con_descuento() -> Invoice:
+    return parsear(desanidar(construir_peppol_invoice_descuento()))
+
+
+def test_lee_el_descuento_y_el_cargo_de_documento(con_descuento: Invoice) -> None:
+    assert con_descuento.descuento_total == Decimal("100.00")
+    assert con_descuento.cargo_total == Decimal("0.00")
+
+
+def test_una_factura_peppol_con_descuento_de_documento_cuadra(con_descuento: Invoice) -> None:
+    """TaxInclusiveAmount (1089) ya descuenta los 100: no es un descuadre."""
+    assert con_descuento.subtotal == Decimal("1000.00")
+    assert con_descuento.total == Decimal("1089.00")
+    assert con_descuento.cuadra(), con_descuento.problemas()

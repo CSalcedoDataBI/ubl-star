@@ -246,6 +246,8 @@ def parsear(xml: str) -> Invoice:
         # meterlo aqui convertiria cada subsidio en un descuadre falso. Ver el
         # contrato, seccion "Coherencia".
         total=_dinero(totales, "cbc:TaxInclusiveAmount"),
+        descuento_total=_dinero(totales, "cbc:AllowanceTotalAmount"),
+        cargo_total=_dinero(totales, "cbc:ChargeTotalAmount"),
         orden_compra=_texto(raiz, "cac:OrderReference/cbc:ID"),
         tipo_documento=TIPOS[nombre],
         lineas=[_linea(n, ruta_cantidad) for n in raiz.findall(ruta_linea, NS)],
