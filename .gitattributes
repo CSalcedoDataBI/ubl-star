@@ -1,0 +1,4 @@
+# Los scripts de shell corren en Linux (CI, sandbox de evals): con CRLF, `sh`
+# falla con errores crípticos. Se fuerzan a LF en cualquier checkout.
+*.sh text eol=lf
+.githooks/* text eol=lf

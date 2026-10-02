@@ -89,6 +89,51 @@ factura = leer("adjunto.zip")      # el contrato Invoice
 factura.cuadra(), factura.problemas()
 ```
 
+## Plugin de Claude Code
+
+Este repositorio también es un **plugin de Claude Code**, con una sola skill:
+`leer-facturas-ubl`. Le dices a Claude «convierte estas facturas de la DIAN en tablas para Power BI»
+o «¿cuánto IVA hay en esta carpeta?», y Claude llama a la CLI de `ubl-star` en vez de escribir un
+parser propio.
+
+```text
+/plugin marketplace add CSalcedoDataBI/ubl-star
+/plugin install ubl-star@ubl-star
+```
+
+Requisitos: [`uv`](https://docs.astral.sh/uv/) (o `pip`), `git` y Python ≥ 3.11.
+
+### Qué ejecuta, qué envía y qué descarga
+
+- **Ejecuta** la CLI de `ubl-star` en tu máquina, **fijada a una versión exacta**:
+  `uvx --from git+https://github.com/CSalcedoDataBI/ubl-star@vX.Y.Z ubl-star model ...`. Para
+  responder preguntas sobre las tablas, ejecuta además un script corto de Python con la misma
+  versión fijada.
+- **Descarga**, solo la primera vez, el paquete de ese tag desde GitHub y sus dependencias desde
+  PyPI (`pydantic`, `defusedxml`, `pyarrow`). Después queda en la caché de `uv`.
+- **No envía nada a ningún servicio.** El parseo es local y no hace llamadas de red. Lo único que
+  sale de tu máquina es lo que Claude lee de la salida, que entra en la conversación. Por eso la CLI
+  solo imprime conteos, y la skill entrega archivos y agregados en vez de volcar filas con nombres,
+  NIT o cédulas.
+
+### Evals
+
+`evals/` tiene cuatro casos, todos sobre las fixtures sintéticas:
+
+- de un ZIP de la DIAN a Power BI;
+- IVA neto con notas crédito;
+- PDF fuera de alcance;
+- que Claude no escriba un parser propio.
+
+Se corren así:
+
+```bash
+claude plugin eval . --allow-tools Bash --scaffold --trust-plugin
+```
+
+`--allow-tools Bash` es necesario porque la skill ejecuta la CLI. Ese Bash corre dentro del sandbox
+del sistema: en Linux y macOS funciona; en Windows requiere el sandbox de Claude Code activo.
+
 ## Alcance — y lo que queda fuera a propósito
 
 `ubl-star` lee **XML**. Si lo que tienes es un PDF escaneado, una foto o un PDF sin adjunto, esta no
@@ -192,6 +237,13 @@ El paso 1 no sobra teniendo el 2: en Windows el bit de modo ni se consulta y los
 así que el paso 2 se ve idéntico con `100644` y con `100755`. El `git ls-files` es la única
 comprobación que ve el fallo desde cualquier plataforma — y es un fallo real, no hipotético: le pasó
 a `pdfstar`, donde el hook estuvo meses sin efecto en Linux y macOS sin que nada lo delatara.
+
+### Versiones y release
+
+La versión de `pyproject.toml`, la de `.claude-plugin/plugin.json` y la que la skill fija en
+`@vX.Y.Z` son siempre la misma; `tests/test_plugin.py` falla si se separan. **Cualquier cambio del
+plugin o del paquete sube la versión.** Al mergear a `main`, `.github/workflows/release.yml` crea
+el tag `vX.Y.Z` si todavía no existe. Un tag publicado no se mueve.
 
 ## Licencia
 

@@ -1,0 +1,42 @@
+name: Release
+
+# La skill del plugin fija la CLI a `git+https://...ubl-star@vX.Y.Z`. Si ese tag
+# no existe, el plugin falla en el primer paso. Este workflow lo crea al mergear
+# a main cuando la version de pyproject.toml todavia no tiene tag. Un tag que ya
+# existe no se mueve: los tags publicados son inmutables.
+on:
+  push:
+    branches: [main]
+
+# Un release cancelado a medias dejaria el tag en un estado dudoso: no se cancela.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: tag de version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Crear el tag si falta
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag ya existe en $(git rev-list -n1 "$tag"); no se toca."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "ubl-star $version"
+          git push origin "$tag"
+          echo "creado $tag en $GITHUB_SHA"

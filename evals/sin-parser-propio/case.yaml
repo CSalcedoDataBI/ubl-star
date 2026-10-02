@@ -1,0 +1,4 @@
+schema_version: "1.0"
+name: sin-parser-propio
+context:
+  scaffold_script: scaffold.sh
