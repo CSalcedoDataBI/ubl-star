@@ -10,6 +10,9 @@ y lineas con `InvoicedQuantity` fija en 1.00 llevando el importe entero en
 (CustomizationID 601): el XML lleva la plata por concepto, no el consumo fisico.
 """
 
+import json
+import sys
+from collections.abc import Callable
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -175,9 +178,169 @@ def construir_adjunto_nota(raiz: str) -> str:
     return _adjuntar(construir_nota(raiz), _numero_nota(raiz))
 
 
+# --- Perfil PEPPOL BIS Billing 3.0 / EN 16931 ------------------------------
+#
+# Todo inventado: los nombres llevan EXAMPLE, los IVA son ceros con el prefijo
+# de pais y el endpoint usa un esquema "0000" que no existe. La estructura es la
+# de PEPPOL: Invoice suelto (sin AttachedDocument), vencimiento en `cbc:DueDate`,
+# IVA en `PartyTaxScheme/CompanyID` (y el registro mercantil, distinto, en
+# `PartyLegalEntity/CompanyID`), el nombre del articulo en `cac:Item/cbc:Name` y
+# el codigo del vendedor en `SellersItemIdentification`.
+_PEPPOL_INVOICE = """<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" \
+xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" \
+xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">\
+<cbc:CustomizationID>\
+urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0\
+</cbc:CustomizationID>\
+<cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>\
+<cbc:ID>INV-0001</cbc:ID>\
+<cbc:IssueDate>2026-03-02</cbc:IssueDate>\
+<cbc:DueDate>2026-04-01</cbc:DueDate>\
+<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>\
+<cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>\
+<cbc:BuyerReference>REF-0001</cbc:BuyerReference>\
+<cac:OrderReference><cbc:ID>PO-0001</cbc:ID></cac:OrderReference>\
+<cac:AccountingSupplierParty><cac:Party>\
+<cbc:EndpointID schemeID="0000">0000000001</cbc:EndpointID>\
+<cac:PartyName><cbc:Name>EXAMPLE SUPPLIER</cbc:Name></cac:PartyName>\
+<cac:PostalAddress><cac:Country><cbc:IdentificationCode>NL</cbc:IdentificationCode>\
+</cac:Country></cac:PostalAddress>\
+<cac:PartyTaxScheme><cbc:CompanyID>NL000000000B01</cbc:CompanyID>\
+<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>\
+<cac:PartyLegalEntity><cbc:RegistrationName>EXAMPLE SUPPLIER B.V.</cbc:RegistrationName>\
+<cbc:CompanyID>00000001</cbc:CompanyID></cac:PartyLegalEntity>\
+</cac:Party></cac:AccountingSupplierParty>\
+<cac:AccountingCustomerParty><cac:Party>\
+<cbc:EndpointID schemeID="0000">0000000002</cbc:EndpointID>\
+<cac:PostalAddress><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode>\
+</cac:Country></cac:PostalAddress>\
+<cac:PartyTaxScheme><cbc:CompanyID>DE000000000</cbc:CompanyID>\
+<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>\
+<cac:PartyLegalEntity><cbc:RegistrationName>EXAMPLE BUYER GMBH</cbc:RegistrationName>\
+</cac:PartyLegalEntity>\
+</cac:Party></cac:AccountingCustomerParty>\
+<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode></cac:PaymentMeans>\
+<cac:TaxTotal><cbc:TaxAmount currencyID="EUR">210.00</cbc:TaxAmount>\
+<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">1000.00</cbc:TaxableAmount>\
+<cbc:TaxAmount currencyID="EUR">210.00</cbc:TaxAmount>\
+<cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent>\
+<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>\
+</cac:TaxSubtotal></cac:TaxTotal>\
+<cac:LegalMonetaryTotal>\
+<cbc:LineExtensionAmount currencyID="EUR">1000.00</cbc:LineExtensionAmount>\
+<cbc:TaxExclusiveAmount currencyID="EUR">1000.00</cbc:TaxExclusiveAmount>\
+<cbc:TaxInclusiveAmount currencyID="EUR">1210.00</cbc:TaxInclusiveAmount>\
+<cbc:PayableAmount currencyID="EUR">1210.00</cbc:PayableAmount>\
+</cac:LegalMonetaryTotal>\
+<cac:InvoiceLine><cbc:ID>1</cbc:ID>\
+<cbc:InvoicedQuantity unitCode="C62">4</cbc:InvoicedQuantity>\
+<cbc:LineExtensionAmount currencyID="EUR">800.00</cbc:LineExtensionAmount>\
+<cac:Item><cbc:Name>EXAMPLE WIDGET</cbc:Name>\
+<cac:SellersItemIdentification><cbc:ID>SKU-0001</cbc:ID></cac:SellersItemIdentification>\
+<cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent>\
+<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>\
+<cac:Price><cbc:PriceAmount currencyID="EUR">200.00</cbc:PriceAmount></cac:Price>\
+</cac:InvoiceLine>\
+<cac:InvoiceLine><cbc:ID>2</cbc:ID>\
+<cbc:InvoicedQuantity unitCode="HUR">2</cbc:InvoicedQuantity>\
+<cbc:LineExtensionAmount currencyID="EUR">200.00</cbc:LineExtensionAmount>\
+<cac:Item><cbc:Description>EXAMPLE SUPPORT HOURS</cbc:Description>\
+<cbc:Name>SUPPORT</cbc:Name>\
+<cac:SellersItemIdentification><cbc:ID>SKU-0002</cbc:ID></cac:SellersItemIdentification>\
+<cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent>\
+<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>\
+<cac:Price><cbc:PriceAmount currencyID="EUR">100.00</cbc:PriceAmount></cac:Price>\
+</cac:InvoiceLine>\
+</Invoice>"""
+
+
+def construir_peppol_invoice() -> str:
+    """Una factura PEPPOL BIS 3.0 suelta, como llega por la red PEPPOL."""
+    return _PEPPOL_INVOICE
+
+
+def construir_peppol_credit_note() -> str:
+    """La nota credito PEPPOL que anula la factura anterior.
+
+    En CreditNote no existe `cbc:DueDate`: el vencimiento va en
+    `cac:PaymentMeans/cbc:PaymentDueDate`.
+    """
+    return (
+        _PEPPOL_INVOICE.replace(":xsd:Invoice-2", ":xsd:CreditNote-2")
+        .replace("<Invoice ", "<CreditNote ")
+        .replace("</Invoice>", "</CreditNote>")
+        .replace("InvoiceLine>", "CreditNoteLine>")
+        .replace("InvoicedQuantity", "CreditedQuantity")
+        .replace("<cbc:ID>INV-0001</cbc:ID>", "<cbc:ID>CN-0001</cbc:ID>", 1)
+        .replace("<cbc:DueDate>2026-04-01</cbc:DueDate>", "")
+        .replace(
+            "<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>",
+            "<cbc:CreditNoteTypeCode>381</cbc:CreditNoteTypeCode>",
+        )
+        .replace(
+            "</cac:OrderReference>",
+            "</cac:OrderReference><cac:BillingReference><cac:InvoiceDocumentReference>"
+            "<cbc:ID>INV-0001</cbc:ID><cbc:IssueDate>2026-03-02</cbc:IssueDate>"
+            "</cac:InvoiceDocumentReference></cac:BillingReference>",
+        )
+        .replace(
+            "<cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>",
+            "<cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>"
+            "<cbc:PaymentDueDate>2026-04-01</cbc:PaymentDueDate>",
+        )
+    )
+
+
+def _nota_credito_dian() -> str:
+    return construir_adjunto_nota("CreditNote")
+
+
+def _nota_debito_dian() -> str:
+    return construir_adjunto_nota("DebitNote")
+
+
+# Cada fixture en disco y la funcion que la fabrica. `test_fixtures` comprueba
+# que coinciden byte a byte y que la salida del parser coincide con `golden/`.
+FIXTURES: dict[str, Callable[[], str]] = {
+    "dian_spd_601.xml": construir_adjunto_spd,
+    "dian_nota_credito.xml": _nota_credito_dian,
+    "dian_nota_debito.xml": _nota_debito_dian,
+    "peppol_invoice.xml": construir_peppol_invoice,
+    "peppol_credit_note.xml": construir_peppol_credit_note,
+}
+
+GOLDEN = AQUI / "golden"
+
+
+def golden(nombre: str) -> Path:
+    """`peppol_invoice.xml` -> `golden/peppol_invoice.json`."""
+    return GOLDEN / (Path(nombre).stem + ".json")
+
+
+def escribir_golden() -> None:
+    """Regenera los golden files con el parser ACTUAL.
+
+    Solo se corre a proposito (`python -m tests.fixtures.generar --golden`), y
+    el diff que deja es lo que hay que leer: un golden que cambia es un cambio
+    en la salida del parser.
+    """
+    from ubl_star.parser import desanidar, parsear
+
+    GOLDEN.mkdir(exist_ok=True)
+    for nombre, construir in FIXTURES.items():
+        salida = parsear(desanidar(construir())).model_dump(mode="json")
+        texto = json.dumps(salida, indent=2, sort_keys=True, ensure_ascii=False)
+        golden(nombre).write_text(texto + "\n", encoding="utf-8")
+        print(f"escrito golden/{golden(nombre).name}")
+
+
 def main() -> None:
-    (AQUI / "dian_spd_601.xml").write_text(construir_adjunto_spd(), encoding="utf-8")
-    print("escrita dian_spd_601.xml")
+    for nombre, construir in FIXTURES.items():
+        (AQUI / nombre).write_text(construir(), encoding="utf-8")
+        print(f"escrita {nombre}")
+    if "--golden" in sys.argv:
+        escribir_golden()
 
 
 if __name__ == "__main__":

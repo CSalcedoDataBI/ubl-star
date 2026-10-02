@@ -104,9 +104,23 @@ def _dinero(nodo: Element | None, ruta: str) -> Decimal | None:
     return Decimal(crudo) if crudo is not None else None
 
 
-def _fecha(nodo: Element | None, ruta: str) -> date | None:
-    crudo = _texto(nodo, ruta)
+def _fecha(nodo: Element | None, *rutas: str) -> date | None:
+    crudo = _primero(nodo, *rutas)
     return date.fromisoformat(crudo) if crudo is not None else None
+
+
+def _primero(nodo: Element | None, *rutas: str) -> str | None:
+    """El texto de la primera ruta que este presente, en el orden dado.
+
+    Para campos que el estandar admite en mas de un sitio segun el documento o
+    el perfil. No es una suposicion: cada ruta es la que el estandar define para
+    ese dato, y el orden dice cual manda si vienen las dos.
+    """
+    for ruta in rutas:
+        valor = _texto(nodo, ruta)
+        if valor is not None:
+            return valor
+    return None
 
 
 def _atributo(nodo: Element | None, ruta: str, nombre: str) -> str | None:
@@ -163,11 +177,17 @@ def _referencia(raiz: Element) -> dict[str, Any] | None:
 
 def _linea(nodo: Element, cantidad: str) -> InvoiceLine:
     return InvoiceLine(
-        descripcion=_texto(nodo, "cac:Item/cbc:Description"),
+        # PEPPOL: cbc:Name es obligatorio (BT-153) y cbc:Description opcional (BT-154).
+        descripcion=_primero(nodo, "cac:Item/cbc:Description", "cac:Item/cbc:Name"),
         cantidad=_dinero(nodo, cantidad),
         precio_unitario=_dinero(nodo, "cac:Price/cbc:PriceAmount"),
         importe=_dinero(nodo, "cbc:LineExtensionAmount"),
-        codigo=_texto(nodo, "cac:Item/cac:StandardItemIdentification/cbc:ID"),
+        # El codigo estandar (GTIN, BT-157) si lo hay; si no, el del vendedor (BT-155).
+        codigo=_primero(
+            nodo,
+            "cac:Item/cac:StandardItemIdentification/cbc:ID",
+            "cac:Item/cac:SellersItemIdentification/cbc:ID",
+        ),
         extras={
             "unidad": _atributo(nodo, cantidad, "unitCode"),
             "cuenta": _texto(nodo, "cbc:AccountingCostCode"),
@@ -182,6 +202,13 @@ _RUTAS = {
     "CreditNote": ("cac:CreditNoteLine", "cbc:CreditedQuantity", "cac:LegalMonetaryTotal"),
     "DebitNote": ("cac:DebitNoteLine", "cbc:DebitedQuantity", "cac:RequestedMonetaryTotal"),
 }
+
+
+# El id fiscal es el de PartyTaxScheme (en PEPPOL, el IVA: BT-31). En
+# PartyLegalEntity/CompanyID PEPPOL pone el registro mercantil (BT-30), que es
+# otro numero; la DIAN pone el NIT en los dos sitios, y en el adquirente a
+# veces solo en PartyLegalEntity.
+_ID_FISCAL = ("cac:PartyTaxScheme/cbc:CompanyID", "cac:PartyLegalEntity/cbc:CompanyID")
 
 
 def parsear(xml: str) -> Invoice:
@@ -205,11 +232,13 @@ def parsear(xml: str) -> Invoice:
         numero_factura=_texto(raiz, "cbc:ID"),
         cufe=_texto(raiz, "cbc:UUID"),
         fecha_emision=_fecha(raiz, "cbc:IssueDate"),
-        fecha_vencimiento=_fecha(raiz, "cac:PaymentMeans/cbc:PaymentDueDate"),
+        # Invoice lo pone en cbc:DueDate (EN 16931 BT-9); CreditNote no tiene ese
+        # elemento y la DIAN usa PaymentMeans en los tres documentos.
+        fecha_vencimiento=_fecha(raiz, "cbc:DueDate", "cac:PaymentMeans/cbc:PaymentDueDate"),
         proveedor_nombre=_texto(proveedor, "cac:PartyLegalEntity/cbc:RegistrationName"),
-        proveedor_id_fiscal=_texto(proveedor, "cac:PartyLegalEntity/cbc:CompanyID"),
+        proveedor_id_fiscal=_primero(proveedor, *_ID_FISCAL),
         cliente_nombre=_texto(cliente, "cac:PartyLegalEntity/cbc:RegistrationName"),
-        cliente_id_fiscal=_texto(cliente, "cac:PartyLegalEntity/cbc:CompanyID"),
+        cliente_id_fiscal=_primero(cliente, *_ID_FISCAL),
         moneda=_texto(raiz, "cbc:DocumentCurrencyCode"),
         subtotal=_dinero(totales, "cbc:LineExtensionAmount"),
         impuesto_total=_dinero(raiz, "cac:TaxTotal/cbc:TaxAmount"),
@@ -217,6 +246,7 @@ def parsear(xml: str) -> Invoice:
         # meterlo aqui convertiria cada subsidio en un descuadre falso. Ver el
         # contrato, seccion "Coherencia".
         total=_dinero(totales, "cbc:TaxInclusiveAmount"),
+        orden_compra=_texto(raiz, "cac:OrderReference/cbc:ID"),
         tipo_documento=TIPOS[nombre],
         lineas=[_linea(n, ruta_cantidad) for n in raiz.findall(ruta_linea, NS)],
         extras={
