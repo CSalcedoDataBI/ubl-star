@@ -58,6 +58,30 @@ jobs:
       - name: Tests + cobertura minima
         run: python -m pytest -q --cov
 
+  plugin:
+    # El repo tambien es un plugin de Claude Code. Su manifiesto, el del
+    # marketplace y la skill se validan con el validador oficial en modo
+    # estricto: un aviso que el runtime tolera aqui es un fallo.
+    name: plugin de Claude Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validar plugin, marketplace y skill
+        run: |
+          claude plugin validate --strict .claude-plugin/plugin.json
+          claude plugin validate --strict .claude-plugin/marketplace.json
+          claude plugin validate --strict skills
+
   hook:
     # La barrera anti-contaminacion es lo unico que impide que una factura real
     # entre a un repo publico, y su fallo es silencioso: git omite un hook no

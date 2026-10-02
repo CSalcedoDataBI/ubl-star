@@ -227,3 +227,6 @@ __marimo__/
 
 # Scratch space de la ejecucion agentica — no se versiona.
 .superpowers/
+
+# Resultados de `claude plugin eval`: se regeneran en cada corrida.
+evals/results/
