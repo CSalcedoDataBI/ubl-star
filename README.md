@@ -17,13 +17,11 @@ totales— conforme a un [contrato de salida versionado](docs/contrato/factura-v
 
 > ### Estado — léelo antes de instalar
 >
-> Hoy `ubl-star` es una **librería**: abre el ZIP del adjunto, localiza el XML dentro y lo parsea al
-> contrato. Eso funciona y está probado.
+> `ubl-star` es una **librería y una CLI**. Abre el ZIP del adjunto, localiza el XML, lo parsea al
+> contrato y escribe el esquema estrella en Parquet o CSV con un solo comando. Lee facturas, notas
+> crédito y notas débito.
 >
-> Lo que **todavía no existe**: no hay CLI, y no hay escritura a Parquet ni a CSV. El esquema
-> estrella (`dim_proveedor`, `dim_fecha`, `dim_item`, `fact_factura_linea`) es la meta del proyecto,
-> no algo que ya puedas ejecutar — va en
-> [#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6).
+> Todavía **no está publicado en PyPI**: hoy se instala desde el repositorio.
 >
 > Están probados los perfiles **DIAN** y **PEPPOL BIS 3.0 / EN 16931**, cada uno con factura y
 > nota crédito (y nota débito en la DIAN), sobre fixtures sintéticas con su golden file.
@@ -50,12 +48,46 @@ cada una de esas rutas en un orden fijo, y cada una sale del estándar, no de un
 1. **Entrada** — un XML UBL 2.1, o el ZIP del adjunto que lo contiene. ✅
 2. **Parseo** — sin adivinar: cada campo sale de su ruta en el estándar. ✅
 3. **Mapeo** — al contrato de factura canónico (emisor, receptor, líneas, impuestos, totales). ✅
-4. **Modelo** — esquema estrella → Parquet / CSV. ⬜ *pendiente,
-   [#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6)*
+4. **Modelo** — esquema estrella → Parquet / CSV. ✅
 
-Los tres primeros pasos están implementados y probados; el cuarto es el que falta. No hay escalón
-caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está — y eso se
+No hay escalón caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está — y eso se
 reporta, no se inventa.
+
+## Uso
+
+```bash
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star"
+ubl-star model ./buzon-de-facturas --salida ./modelo
+```
+
+`ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
+escribe cinco tablas y un registro de lo que no pudo leer:
+
+| Archivo | Qué es |
+|---|---|
+| `dim_proveedor` | un emisor por id fiscal |
+| `dim_item` | un artículo por código y descripción |
+| `dim_fecha` | calendario de años completos (sirve como tabla de fechas de Power BI) |
+| `fact_factura` | un documento: totales, IVA, pagadero, vencimiento |
+| `fact_factura_linea` | una línea: cantidad, precio, importe |
+| `rechazados.csv` | cada archivo que no entró, con el motivo |
+
+`--formato csv` escribe CSV en vez de Parquet. Las notas crédito llevan `signo = -1`, así que el
+neto es `SUM(importe * signo)`. Si la misma factura llega dos veces (en el ZIP y suelta), cuenta
+una sola vez y la copia queda en `rechazados.csv`. Por pantalla solo salen conteos, nunca datos de
+las facturas.
+
+Termina con código `0` si leyó todo, `1` si algún archivo quedó rechazado (las tablas se escriben
+igual con lo demás) y `2` ante un error de uso.
+
+Desde Python:
+
+```python
+from ubl_star.parser import leer
+
+factura = leer("adjunto.zip")      # el contrato Invoice
+factura.cuadra(), factura.problemas()
+```
 
 ## Alcance — y lo que queda fuera a propósito
 
@@ -74,9 +106,12 @@ versionado**, y hay un test que ancla la salida a ese documento. La razón es qu
 —leyendo otra fuente— pueda entregar exactamente el mismo modelo y ser intercambiable aguas abajo,
 sin compartir una línea de código con esta.
 
-El contrato v1 declara la factura canónica: `invoice` e `invoice_line`. Las tablas del esquema
-estrella todavía no están declaradas en él — llegarán con
-[#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6), que es lo que las hará existir.
+Son dos documentos, cada uno anclado por su test:
+
+- [`factura-v1.md`](docs/contrato/factura-v1.md) declara la factura canónica, `invoice` e
+  `invoice_line`.
+- [`estrella-v1.md`](docs/contrato/estrella-v1.md) declara las cinco tablas que escribe
+  `ubl-star model`, con sus columnas, tipos, claves y reglas.
 
 ## Desarrollo
 
