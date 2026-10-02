@@ -11,12 +11,11 @@ Se usa defusedxml y no la stdlib a secas porque esto lee documentos que llegan
 de un tercero, y `xml.etree` es vulnerable a entidades expansivas.
 """
 
-import re
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from xml.etree.ElementTree import Element
+from xml.etree.ElementTree import Element, ParseError
 
 from defusedxml.ElementTree import fromstring
 
@@ -28,29 +27,53 @@ NS = {
     "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
 }
 
-_CDATA = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.DOTALL)
-
 
 class NoEsUnaFactura(Exception):
     """El XML no es un Invoice ni un AttachedDocument que lo contenga."""
 
 
+def _nombre_local(nodo: Element) -> str:
+    """`{urn:...}Invoice` -> `Invoice`. El prefijo del documento no importa."""
+    return nodo.tag.rsplit("}", 1)[-1]
+
+
+def _raiz(xml: str) -> Element | None:
+    """La raiz del XML, o None si el texto no es XML bien formado."""
+    try:
+        raiz: Element = fromstring(xml)
+    except ParseError:
+        return None
+    return raiz
+
+
 def desanidar(xml: str) -> str:
     """Devuelve el Invoice. Si viene embebido en un AttachedDocument, lo saca.
 
-    El AttachedDocument lleva dos bloques CDATA: el Invoice y la
-    ApplicationResponse del validador. Se busca el que sea una factura en vez de
-    tomar el primero por posicion, porque el orden no lo garantiza el estandar.
+    Se decide por el elemento y no por el texto: buscar `"<Invoice"` en la cadena
+    no ve un Invoice escapado con entidades (`&lt;Invoice`) ni una raiz con
+    prefijo (`<inv:Invoice>`), y si ve uno que solo esta en un comentario.
+
+    El AttachedDocument lleva en `cbc:Description` el Invoice y la
+    ApplicationResponse del validador. El parser ya entrega ese texto
+    desescapado, venga en CDATA o con entidades. Se busca el que sea una factura
+    en vez de tomar el primero por posicion, porque el orden no lo garantiza el
+    estandar.
     """
-    if "<Invoice" in xml and "<AttachedDocument" not in xml:
+    raiz = _raiz(xml)
+    if raiz is None:
+        raise NoEsUnaFactura("el texto no es XML bien formado")
+
+    if _nombre_local(raiz) == "Invoice":
         return xml
 
-    for candidato in _CDATA.findall(xml):
-        # findall() esta tipado como list[Any] en typeshed (los grupos podrian
-        # no ser str); aqui siempre lo son porque el patron no tiene alternativas.
-        bloque: str = candidato
-        if "<Invoice" in bloque:
-            return bloque
+    if _nombre_local(raiz) == "AttachedDocument":
+        for descripcion in raiz.iterfind(
+            "cac:Attachment/cac:ExternalReference/cbc:Description", NS
+        ):
+            bloque = (descripcion.text or "").strip()
+            embebido = _raiz(bloque)
+            if embebido is not None and _nombre_local(embebido) == "Invoice":
+                return bloque
 
     raise NoEsUnaFactura("el XML no es un Invoice ni contiene uno embebido")
 
@@ -135,7 +158,7 @@ def parsear(xml: str) -> Invoice:
     """Mapea un Invoice UBL 2.1 al contrato. Lo que no esta, no esta."""
     raiz = fromstring(xml)
 
-    if not raiz.tag.endswith("}Invoice") and raiz.tag != "Invoice":
+    if _nombre_local(raiz) != "Invoice":
         raise NoEsUnaFactura(f"la raiz es {raiz.tag}, no un Invoice")
 
     proveedor = raiz.find("cac:AccountingSupplierParty/cac:Party", NS)
