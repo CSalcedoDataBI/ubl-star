@@ -69,14 +69,26 @@ def test_los_scaffolds_de_los_evals_son_identicos() -> None:
     assert len(contenidos) == 1, [str(p) for p in scaffolds]
 
 
-def test_el_scaffold_deja_la_cli_lista_sin_red() -> None:
-    """El Bash del eval no tiene red: el scaffold descarga la version del paquete
-    (leida de pyproject, nunca escrita a mano) y deja uv en modo offline."""
+def test_el_scaffold_lee_la_version_y_no_la_escribe() -> None:
+    """La version sale de pyproject (tolerando CRLF), nunca escrita a mano."""
     texto = next(EVALS.glob("*/scaffold.sh")).read_text(encoding="utf-8")
-    assert "pyproject.toml" in texto
+    assert "pyproject.toml" in texto and "tr -d '\\r'" in texto
     assert not re.search(r"@v\d+\.\d+\.\d+", texto), "version escrita a mano"
-    assert "offline = true" in texto
+    # La cache, en la config de usuario y con ruta absoluta: el agente puede hacer
+    # `cd $TMPDIR` antes de uvx y no ve la ~/.cache del scaffold (corrida real).
+    assert '"$HOME/.config/uv/uv.toml"' in texto
+    assert "> uv.toml" not in texto
     assert 'uvx --from "$origen" python' in texto  # el entorno del paso 3 de la skill
+
+
+def test_los_evals_abren_la_red_solo_a_github_y_pypi() -> None:
+    """Sin red, uv no resuelve el tag de git (probado con uv 0.12): el comando
+    documentado y el workflow abren solo GitHub y PyPI."""
+    readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+    flujo = (RAIZ / ".github" / "workflows" / "evals.yml").read_text(encoding="utf-8")
+    for dominio in ("github.com", "pypi.org", "files.pythonhosted.org"):
+        assert f"WebFetch(domain:{dominio})" in readme, dominio
+        assert f"WebFetch(domain:{dominio})" in flujo, dominio
 
 
 def test_la_skill_usa_un_solo_entorno_fijado() -> None:

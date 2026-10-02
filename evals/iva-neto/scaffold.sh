@@ -3,13 +3,20 @@
 #
 # 1. ./buzon con las fixtures SINTETICAS del repo (nunca una factura real). La
 #    factura DIAN va dentro de un ZIP, como llega del proveedor.
-# 2. La CLI fijada, ya descargada. El Bash del agente corre en un sandbox SIN red,
-#    asi que `uvx --from git+...@vX.Y.Z` no podria descargar nada. Este script si
-#    tiene red: llena una cache de uv local al caso y deja `uv.toml` en modo
-#    offline. El comando de la skill, sin cambios, resuelve desde esa cache.
+# 2. Una cache de uv con la CLI fijada ya descargada, para que la corrida no
+#    dependa de la velocidad de PyPI. La red del agente se abre solo a GitHub y
+#    PyPI desde la linea de comando del eval (ver README, seccion Evals): uv
+#    siempre consulta GitHub para resolver un tag de git, asi que un modo offline
+#    no sirve (probado con uv 0.12).
 set -e
 raiz=$(cd "$(dirname "$0")/../.." && pwd)
-version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$raiz/pyproject.toml")
+# `tr -d '\r'`: en un checkout de Windows pyproject.toml tiene CRLF y el `"$` del
+# patron no casaria; la version saldria vacia y se pediria el tag `v`.
+version=$(tr -d '\r' < "$raiz/pyproject.toml" | sed -n 's/^version = "\(.*\)"$/\1/p')
+if [ -z "$version" ]; then
+  echo "scaffold: no se pudo leer la version de pyproject.toml" >&2
+  exit 1
+fi
 origen="git+https://github.com/CSalcedoDataBI/ubl-star@v$version"
 
 mkdir -p buzon
@@ -21,8 +28,12 @@ done
 python3 -m zipfile -c buzon/ad_dian_spd.zip buzon/dian_spd_601.xml
 rm buzon/dian_spd_601.xml
 
-printf 'cache-dir = ".uv-cache"\n' > uv.toml
+# La cache va DENTRO de la carpeta del caso y se declara en la config de usuario
+# de uv: el sandbox del agente no ve la ~/.cache que llena este script, y el
+# agente puede hacer `cd $TMPDIR` antes de uvx (visto en corridas reales).
+cache="$(pwd)/.uv-cache"
+mkdir -p "$HOME/.config/uv"
+printf 'cache-dir = "%s"\n' "$cache" > "$HOME/.config/uv/uv.toml"
 uvx --from "$origen" ubl-star --version
 uvx --from "$origen" python -c "import pyarrow"
-printf 'cache-dir = ".uv-cache"\noffline = true\n' > uv.toml
 ls buzon

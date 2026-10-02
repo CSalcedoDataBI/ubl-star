@@ -128,17 +128,20 @@ Requisitos: [`uv`](https://docs.astral.sh/uv/) (o `pip`), `git` y Python ≥ 3.1
 Se corren así:
 
 ```bash
-claude plugin eval . --allow-tools Bash --scaffold --trust-plugin
+claude plugin eval . --scaffold --trust-plugin --allow-tools Bash "WebFetch(domain:github.com)" "WebFetch(domain:pypi.org)" "WebFetch(domain:files.pythonhosted.org)"
 ```
 
-`--allow-tools Bash` es necesario porque la skill ejecuta la CLI. Ese Bash corre en un sandbox
-**sin red**. Por eso el scaffold de cada caso, que sí tiene red, descarga antes la versión fijada en
-una caché de uv del propio caso y deja uv en modo offline.
+`--allow-tools Bash` hace falta porque la skill ejecuta la CLI. Ese Bash corre en un sandbox
+**sin red**, y los tres `WebFetch(domain:…)` le abren solo GitHub (para resolver el tag fijado) y
+PyPI (para las dependencias): lo mismo que necesita un usuario real. Un modo offline no sirve, porque
+`uv` siempre consulta GitHub para resolver un tag de git. El scaffold de cada caso deja además la
+CLI descargada en una caché del propio caso, para que la corrida no dependa de la velocidad de PyPI.
 
 - **Linux / macOS:** el comando de arriba. En Linux hacen falta `bubblewrap` y `socat`.
 - **Windows:** no hay sandbox nativo, así que los casos con Bash fallan. Hay dos caminos:
   - desde una distro WSL2 con Linux de verdad (no `docker-desktop`):
-    `wsl -d Ubuntu-24.04`, y dentro, el comando de arriba;
+    `wsl -d Ubuntu-24.04`, y dentro, el comando de arriba, con `uv` y Claude Code instalados en
+    Ubuntu (no los de Windows);
   - el workflow **Evals** de GitHub Actions (manual), que corre en Ubuntu y necesita el secreto
     `ANTHROPIC_API_KEY`.
 
