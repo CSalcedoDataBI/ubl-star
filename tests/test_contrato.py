@@ -7,10 +7,11 @@ si alguien anade un campo al modelo y no al documento, esto falla.
 import re
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
+import pytest
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ubl_star.schema import Dinero, Invoice, InvoiceLine
 
@@ -27,6 +28,7 @@ _TIPOS_DECLARADOS: dict[str, Any] = {
     "money | null": Dinero | None,
     "dict": dict[str, Any],
     "list[invoice_line]": list[InvoiceLine],
+    "tipo_documento | null": Literal["factura", "nota_credito", "nota_debito"] | None,
 }
 
 
@@ -83,3 +85,11 @@ def test_invoice_tiene_los_tipos_del_contrato() -> None:
 def test_invoice_line_tiene_los_tipos_del_contrato() -> None:
     declarados = _campos_declarados()["invoice_line"]
     _verifica_tipos(InvoiceLine, declarados)
+
+
+def test_tipo_documento_solo_acepta_su_vocabulario() -> None:
+    """Un consumidor resta segun este campo: un valor fuera de lista no puede colarse."""
+    assert Invoice(tipo_documento="nota_credito").tipo_documento == "nota_credito"
+    assert Invoice().tipo_documento is None
+    with pytest.raises(ValidationError):
+        Invoice(tipo_documento="credit_note")

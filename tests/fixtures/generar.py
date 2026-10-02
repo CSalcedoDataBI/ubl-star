@@ -91,20 +91,25 @@ xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
 </Invoice>"""
 
 
-def construir_adjunto_spd() -> str:
-    """El AttachedDocument con el Invoice embebido en CDATA, como lo emite la DIAN."""
+def _adjuntar(documento: str, numero: str) -> str:
+    """Envuelve un documento UBL en un AttachedDocument, en CDATA, como la DIAN."""
     return (
         '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
         "<AttachedDocument "
         'xmlns="urn:oasis:names:specification:ubl:schema:xsd:AttachedDocument-2" '
         'xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" '
         'xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">'
-        "<cbc:ID>DEE00000001</cbc:ID>"
+        "<cbc:ID>" + numero + "</cbc:ID>"
         "<cac:Attachment><cac:ExternalReference>"
-        "<cbc:Description><![CDATA[" + _INVOICE + "]]></cbc:Description>"
+        "<cbc:Description><![CDATA[" + documento + "]]></cbc:Description>"
         "</cac:ExternalReference></cac:Attachment>"
         "</AttachedDocument>"
     )
+
+
+def construir_adjunto_spd() -> str:
+    """El AttachedDocument con el Invoice embebido en CDATA, como lo emite la DIAN."""
+    return _adjuntar(_INVOICE, "DEE00000001")
 
 
 def construir_adjunto_escapado() -> str:
@@ -124,6 +129,50 @@ def construir_invoice_prefijado() -> str:
     return _INVOICE.replace('<Invoice xmlns="urn:', '<inv:Invoice xmlns:inv="urn:', 1).replace(
         "</Invoice>", "</inv:Invoice>"
     )
+
+
+# La factura que corrige la nota. Mismos datos sinteticos que _INVOICE.
+_REFERENCIA = (
+    "<cac:BillingReference><cac:InvoiceDocumentReference>"
+    "<cbc:ID>DEE00000001</cbc:ID>"
+    '<cbc:UUID schemeName="CUDE-SHA384">abc123def456</cbc:UUID>'
+    "<cbc:IssueDate>2026-01-15</cbc:IssueDate>"
+    "</cac:InvoiceDocumentReference></cac:BillingReference>"
+)
+
+
+def construir_nota(raiz: str) -> str:
+    """Una CreditNote o DebitNote suelta, derivada del mismo Invoice sintetico.
+
+    Cambia solo lo que el estandar cambia: la raiz y su espacio de nombres, las
+    lineas (`CreditNoteLine` / `CreditedQuantity`, `DebitNoteLine` /
+    `DebitedQuantity`), el codigo de tipo, la referencia a la factura corregida
+    y, en la DebitNote, los totales en `RequestedMonetaryTotal`.
+    """
+    sufijo = {"CreditNote": "Credited", "DebitNote": "Debited"}[raiz]
+    tipo = "<cbc:CreditNoteTypeCode>91</cbc:CreditNoteTypeCode>" if raiz == "CreditNote" else ""
+    nota = (
+        _INVOICE.replace(":xsd:Invoice-2", f":xsd:{raiz}-2")
+        .replace("<Invoice ", f"<{raiz} ")
+        .replace("</Invoice>", f"</{raiz}>")
+        .replace("InvoiceLine>", f"{raiz}Line>")
+        .replace("InvoicedQuantity", f"{sufijo}Quantity")
+        .replace("<cbc:InvoiceTypeCode>60</cbc:InvoiceTypeCode>", tipo)
+        .replace("<cbc:ID>DEE00000001</cbc:ID>", f"<cbc:ID>{_numero_nota(raiz)}</cbc:ID>")
+        .replace("<cac:AccountingSupplierParty>", _REFERENCIA + "<cac:AccountingSupplierParty>")
+    )
+    if raiz == "DebitNote":
+        nota = nota.replace("LegalMonetaryTotal>", "RequestedMonetaryTotal>")
+    return nota
+
+
+def _numero_nota(raiz: str) -> str:
+    return {"CreditNote": "NC00000001", "DebitNote": "ND00000001"}[raiz]
+
+
+def construir_adjunto_nota(raiz: str) -> str:
+    """La nota dentro de un AttachedDocument, como llega en el buzon."""
+    return _adjuntar(construir_nota(raiz), _numero_nota(raiz))
 
 
 def main() -> None:
