@@ -58,6 +58,34 @@ def test_la_skill_nunca_apunta_a_una_rama() -> None:
         assert re.search(r"(@|/blob/)v\d+\.\d+\.\d+", url), url
 
 
+EVALS = RAIZ / "evals"
+
+
+def test_los_scaffolds_de_los_evals_son_identicos() -> None:
+    """Uno solo de verdad, copiado en cada caso (el eval no deja salir del caso)."""
+    scaffolds = sorted(EVALS.glob("*/scaffold.sh"))
+    assert scaffolds, "no hay scaffolds"
+    contenidos = {p.read_text(encoding="utf-8") for p in scaffolds}
+    assert len(contenidos) == 1, [str(p) for p in scaffolds]
+
+
+def test_el_scaffold_deja_la_cli_lista_sin_red() -> None:
+    """El Bash del eval no tiene red: el scaffold descarga la version del paquete
+    (leida de pyproject, nunca escrita a mano) y deja uv en modo offline."""
+    texto = next(EVALS.glob("*/scaffold.sh")).read_text(encoding="utf-8")
+    assert "pyproject.toml" in texto
+    assert not re.search(r"@v\d+\.\d+\.\d+", texto), "version escrita a mano"
+    assert "offline = true" in texto
+    assert 'uvx --from "$origen" python' in texto  # el entorno del paso 3 de la skill
+
+
+def test_la_skill_usa_un_solo_entorno_fijado() -> None:
+    """`uv run --with git+...` vuelve a pedir el git y no funciona sin red."""
+    texto = _textos_de_la_skill()
+    assert "uv run" not in texto
+    assert "ubl-star@v" in texto and "python script.py" in texto
+
+
 def test_el_manifiesto_lleva_lo_que_pide_el_directorio() -> None:
     manifiesto = json.loads(MANIFIESTO.read_text(encoding="utf-8"))
     for campo in (

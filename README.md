@@ -131,8 +131,18 @@ Se corren así:
 claude plugin eval . --allow-tools Bash --scaffold --trust-plugin
 ```
 
-`--allow-tools Bash` es necesario porque la skill ejecuta la CLI. Ese Bash corre dentro del sandbox
-del sistema: en Linux y macOS funciona; en Windows requiere el sandbox de Claude Code activo.
+`--allow-tools Bash` es necesario porque la skill ejecuta la CLI. Ese Bash corre en un sandbox
+**sin red**. Por eso el scaffold de cada caso, que sí tiene red, descarga antes la versión fijada en
+una caché de uv del propio caso y deja uv en modo offline.
+
+- **Linux / macOS:** el comando de arriba. En Linux hacen falta `bubblewrap` y `socat`.
+- **Windows:** no hay sandbox nativo, así que los casos con Bash fallan. Hay dos caminos:
+  - desde una distro WSL2 con Linux de verdad (no `docker-desktop`):
+    `wsl -d Ubuntu-24.04`, y dentro, el comando de arriba;
+  - el workflow **Evals** de GitHub Actions (manual), que corre en Ubuntu y necesita el secreto
+    `ANTHROPIC_API_KEY`.
+
+  El caso `pdf-fuera-de-alcance` no usa Bash: en Windows se puede correr sin `--allow-tools`.
 
 ## Alcance — y lo que queda fuera a propósito
 
