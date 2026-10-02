@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Cristobal Salcedo", email = "support@pesanteanalytics.com" }]
 keywords = ["invoice", "ubl", "dian", "peppol", "star-schema", "parquet"]
 
-# Solo licencias permisivas, igual que pdfstar. Nada AGPL/GPL.
+# Solo licencias permisivas. Nada AGPL/GPL.
 dependencies = [
     "pydantic>=2.7",      # MIT — contratos de datos
     "defusedxml>=0.7",    # PSF — parseo XML sin XXE ni billion-laughs
@@ -27,7 +27,7 @@ dev = [
     "pytest>=8",
     "pytest-cov>=5",
     # CLAVADA, no `>=`: es un verificador cuyo veredicto cambia con la version.
-    # Mismo criterio que pdfstar — si el hook local y el CI corren versiones
+    # Si el hook local y el CI corren versiones
     # distintas, "verde en local" deja de significar nada.
     "ruff==0.15.4",
     "mypy>=1.11",

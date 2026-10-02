@@ -43,6 +43,14 @@ def test_la_skill_fija_la_cli_a_la_version_del_paquete() -> None:
     assert fijadas == {_version_paquete()}, f"versiones fijadas en la skill: {fijadas}"
 
 
+def test_la_documentacion_fija_la_version_del_paquete() -> None:
+    """Un `@vX.Y.Z` viejo en el README manda a instalar otra version."""
+    for doc in ("README.md", "CONTRIBUTING.md"):
+        texto = (RAIZ / doc).read_text(encoding="utf-8")
+        fijadas = set(re.findall(r"ubl-star@v(\d+\.\d+\.\d+)", texto))
+        assert fijadas <= {_version_paquete()}, f"{doc} fija {fijadas}"
+
+
 def test_el_frontmatter_de_la_skill_es_yaml_valido() -> None:
     """Un `: ` suelto en la descripcion rompe el YAML para un parser estricto."""
     _, frontmatter, _ = SKILL.read_text(encoding="utf-8").split("---", 2)
@@ -84,7 +92,7 @@ def test_el_scaffold_lee_la_version_y_no_la_escribe() -> None:
 def test_los_evals_abren_la_red_solo_a_github_y_pypi() -> None:
     """Sin red, uv no resuelve el tag de git (probado con uv 0.12): el comando
     documentado y el workflow abren solo GitHub y PyPI."""
-    readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+    readme = (RAIZ / "CONTRIBUTING.md").read_text(encoding="utf-8")
     flujo = (RAIZ / ".github" / "workflows" / "evals.yml").read_text(encoding="utf-8")
     for dominio in ("github.com", "pypi.org", "files.pythonhosted.org"):
         assert f"WebFetch(domain:{dominio})" in readme, dominio

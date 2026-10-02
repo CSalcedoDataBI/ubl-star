@@ -50,15 +50,19 @@ cada una de esas rutas en un orden fijo, y cada una sale del estándar, no de un
 3. **Mapeo** — al contrato de factura canónico (emisor, receptor, líneas, impuestos, totales). ✅
 4. **Modelo** — esquema estrella → Parquet / CSV. ✅
 
-No hay escalón caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no está — y eso se
-reporta, no se inventa.
+No hay escalón caro porque no hay ambigüedad que resolver. Si un campo no está en el XML, no
+está — y eso se reporta, no se inventa.
 
 ## Uso
 
 ```bash
-pip install "git+https://github.com/CSalcedoDataBI/ubl-star"
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3"
 ubl-star model ./buzon-de-facturas --salida ./modelo
 ```
+
+`@v0.2.3` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
+no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3"
+ubl-star model …`.
 
 `ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
 escribe cinco tablas y un registro de lo que no pudo leer:
@@ -118,34 +122,16 @@ Requisitos: [`uv`](https://docs.astral.sh/uv/) (o `pip`), `git` y Python ≥ 3.1
 
 ### Evals
 
-`evals/` tiene cuatro casos, todos sobre las fixtures sintéticas:
+`evals/` mide el plugin con y sin él sobre las fixtures sintéticas. La última corrida (3 por caso):
 
-- de un ZIP de la DIAN a Power BI;
-- IVA neto con notas crédito;
-- PDF fuera de alcance;
-- que Claude no escriba un parser propio.
+| Caso | Con plugin | Sin plugin |
+|---|---|---|
+| De un ZIP de la DIAN a tablas para Power BI | 1.00 | 0.00 |
+| IVA neto, restando las notas crédito | 1.00 | 0.33 |
+| Un PDF escaneado queda fuera de alcance | 1.00 | 1.00 |
+| Claude no escribe un parser propio | 1.00 | 0.33 |
 
-Se corren así:
-
-```bash
-claude plugin eval . --scaffold --trust-plugin --allow-tools Bash "WebFetch(domain:github.com)" "WebFetch(domain:pypi.org)" "WebFetch(domain:files.pythonhosted.org)"
-```
-
-`--allow-tools Bash` hace falta porque la skill ejecuta la CLI. Ese Bash corre en un sandbox
-**sin red**, y los tres `WebFetch(domain:…)` le abren solo GitHub (para resolver el tag fijado) y
-PyPI (para las dependencias): lo mismo que necesita un usuario real. Un modo offline no sirve, porque
-`uv` siempre consulta GitHub para resolver un tag de git. El scaffold de cada caso deja además la
-CLI descargada en una caché del propio caso, para que la corrida no dependa de la velocidad de PyPI.
-
-- **Linux / macOS:** el comando de arriba. En Linux hacen falta `bubblewrap` y `socat`.
-- **Windows:** no hay sandbox nativo, así que los casos con Bash fallan. Hay dos caminos:
-  - desde una distro WSL2 con Linux de verdad (no `docker-desktop`):
-    `wsl -d Ubuntu-24.04`, y dentro, el comando de arriba, con `uv` y Claude Code instalados en
-    Ubuntu (no los de Windows);
-  - el workflow **Evals** de GitHub Actions (manual), que corre en Ubuntu y necesita el secreto
-    `ANTHROPIC_API_KEY`.
-
-  El caso `pdf-fuera-de-alcance` no usa Bash: en Windows se puede correr sin `--allow-tools`.
+Cómo correrlos: [CONTRIBUTING.md](CONTRIBUTING.md#evals-del-plugin).
 
 ## Alcance — y lo que queda fuera a propósito
 
@@ -171,96 +157,18 @@ Son dos documentos, cada uno anclado por su test:
 - [`estrella-v1.md`](docs/contrato/estrella-v1.md) declara las cinco tablas que escribe
   `ubl-star model`, con sus columnas, tipos, claves y reglas.
 
-## Desarrollo
+## Contribuir
 
-```bash
-git config core.hooksPath .githooks   # obligatorio: barrera anti-contaminación
-pip install -e ".[dev]"
-pytest
-```
+[CONTRIBUTING.md](CONTRIBUTING.md) tiene el entorno, los checks que corre el CI, cómo se añaden
+fixtures y golden files, la regla de versiones y los evals. Una sola regla no se negocia: **ninguna
+factura real** entra al repositorio, ni en un commit ni adjunta a un issue. Las fixtures son
+sintéticas y un hook bloquea cualquier documento fuera de `tests/fixtures/`.
 
-El primer comando no es cosmético. Este repo es **público** y el hook es lo único que impide que una
-factura real —con nombre, NIT, cédula, dirección y CUDE de personas de verdad— entre al historial.
-**Git no lee `.githooks/` por su cuenta:** sin ese `git config`, el archivo está ahí y nadie lo
-llama. Y en un repo público la fuga no se deshace — un `git rm` posterior no la saca del historial
-que ya se clonó.
-
-Las fixtures son sintéticas y se generan por código (`tests/fixtures/generar.py`). Es lo que permite
-que el hook sea tajante: si un documento aparece fuera de `tests/fixtures/`, solo puede ser real.
-
-Cada fixture tiene su **golden file** en `tests/fixtures/golden/`, con la salida completa del parser.
-Si un cambio altera esa salida, el test falla. Si el cambio es deliberado, se regeneran y el diff del
-golden se revisa en el PR:
-
-```bash
-python -m tests.fixtures.generar --golden
-```
-
-### Verificación manual del hook
-
-Tras tocar `.githooks/pre-commit`, confirma **dos cosas distintas**: que git puede ejecutarlo, y que
-hace lo suyo. Fallan por separado, y comprobar lo segundo no detecta lo primero.
-
-**1. Que está instalado y es ejecutable.** Git solo ejecuta hooks que llevan el bit de ejecución. Si
-falta, en Linux y macOS el hook se omite **en silencio** — sin error, sin aviso, commit aceptado:
-
-```bash
-git config core.hooksPath              # no debe salir vacío; apunta a .githooks
-git ls-files -s .githooks/pre-commit   # el modo debe ser 100755, no 100644
-```
-
-Si sale `100644`, el hook está muerto fuera de Windows y se revive así:
-
-```bash
-git update-index --chmod=+x .githooks/pre-commit
-```
-
-**2. Que git lo dispara de verdad.** Un `git commit` real —no `sh`— sobre un caso que debe fallar.
-No commitea nada, precisamente porque el hook lo rechaza:
-
-```bash
-touch factura-real.xml
-git add -f factura-real.xml
-git commit -m "prueba"      # BLOQUEADO + exit 1. Si el commit PASA, el hook no se está ejecutando.
-git restore --staged factura-real.xml && rm factura-real.xml
-```
-
-**3. Que la lógica cubre cada caso.** Aquí sí conviene invocar el script directo: es rápido y el
-caso que *pasa* no acaba commiteando nada por error. Los `-f` fuerzan el paso del `.gitignore`, que
-es justo lo que el hook debe interceptar:
-
-```bash
-touch factura-real.xml factura.Xml
-git add -f factura-real.xml && sh .githooks/pre-commit   # BLOQUEADO: XML fuera de fixtures
-git reset
-git add -f factura.Xml      && sh .githooks/pre-commit   # BLOQUEADO: mayúscula mixta también cuenta
-git reset
-mkdir -p tests/fixtures && touch tests/fixtures/sintetica.xml
-git add -f tests/fixtures/sintetica.xml && sh .githooks/pre-commit  # pasa: fixture sintética
-git reset
-rm factura-real.xml factura.Xml tests/fixtures/sintetica.xml
-```
-
-`factura.Xml` cubre una regresión concreta, y la mayúscula mixta es deliberada. El filtro comparaba
-extensiones literales (`*.xml|*.XML`), así que `.xml` y `.XML` se bloqueaban pero **`.Xml` entraba
-sin más**. Un `.ZIP` en mayúscula no sirve como caso de prueba: ese sí estaba en la lista. Lo que se
-colaba era justo lo que ninguna de las dos variantes escritas contemplaba.
-
-El paso 1 no sobra teniendo el 2: en Windows el bit de modo ni se consulta y los hooks corren igual,
-así que el paso 2 se ve idéntico con `100644` y con `100755`. El `git ls-files` es la única
-comprobación que ve el fallo desde cualquier plataforma — y es un fallo real, no hipotético: le pasó
-a `pdfstar`, donde el hook estuvo meses sin efecto en Linux y macOS sin que nada lo delatara.
-
-### Versiones y release
-
-La versión de `pyproject.toml`, la de `.claude-plugin/plugin.json` y la que la skill fija en
-`@vX.Y.Z` son siempre la misma; `tests/test_plugin.py` falla si se separan. **Cualquier cambio del
-plugin o del paquete sube la versión.** Al mergear a `main`, `.github/workflows/release.yml` crea
-el tag `vX.Y.Z` si todavía no existe. Un tag publicado no se mueve.
+Los cambios de cada versión están en [CHANGELOG.md](CHANGELOG.md).
 
 ## Licencia
 
-MIT. Solo dependencias permisivas (MIT / Apache-2.0 / BSD) — el mismo criterio que `pdfstar`.
+MIT. Solo dependencias con licencia permisiva (MIT / Apache-2.0 / BSD / PSF); nada AGPL ni GPL.
 
 ---
 

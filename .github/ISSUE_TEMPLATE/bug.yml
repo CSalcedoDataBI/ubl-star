@@ -1,0 +1,46 @@
+name: Un XML no se lee bien
+description: Una factura, nota crédito o nota débito que se rechaza o sale con un dato equivocado.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **No adjuntes facturas reales**, ni siquiera tapando datos: este repositorio es público y una
+        factura lleva nombre, NIT, cédula y CUFE de personas reales. Describe la **estructura** (qué
+        elemento, en qué ruta, con qué prefijo) o reprodúcelo con una fixture sintética de
+        `tests/fixtures/generar.py`.
+  - type: checkboxes
+    id: privacidad
+    attributes:
+      label: Privacidad
+      options:
+        - label: No adjunto ni pego datos de una factura real (nombres, NIT, cédulas, CUFE, importes).
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: La salida de `ubl-star --version`.
+      placeholder: ubl-star 0.2.3
+    validations:
+      required: true
+  - type: dropdown
+    id: perfil
+    attributes:
+      label: Perfil
+      options: [DIAN (Colombia), PEPPOL / EN 16931, Otro]
+    validations:
+      required: true
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa
+      description: El error o el campo que sale mal. Pega el mensaje de `rechazados.csv` si lo hay, sin rutas que lleven datos personales.
+    validations:
+      required: true
+  - type: textarea
+    id: estructura
+    attributes:
+      label: Estructura del XML
+      description: Las rutas implicadas (por ejemplo `cac:LegalMonetaryTotal/cbc:TaxInclusiveAmount`), con valores inventados.
+      render: xml
