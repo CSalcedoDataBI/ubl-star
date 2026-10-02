@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.generar import construir_adjunto_spd
+from tests.fixtures.generar import (
+    construir_adjunto_escapado,
+    construir_adjunto_spd,
+    construir_invoice_prefijado,
+)
 from ubl_star.parser import NoEsUnaFactura, desanidar, leer, parsear
 
 
@@ -29,6 +33,23 @@ def test_un_invoice_suelto_pasa_sin_tocarlo() -> None:
 def test_un_xml_que_no_es_factura_lo_dice() -> None:
     with pytest.raises(NoEsUnaFactura):
         desanidar("<?xml version='1.0'?><OtraCosa/>")
+
+
+@pytest.mark.parametrize(
+    "variante",
+    [construir_adjunto_escapado, construir_invoice_prefijado],
+    ids=["invoice-escapado-sin-cdata", "raiz-con-prefijo"],
+)
+def test_otras_formas_validas_del_mismo_xml_dan_la_misma_factura(variante) -> None:
+    """Issue #12: se decide por el elemento, no por el texto `<Invoice`."""
+    original = parsear(desanidar(construir_adjunto_spd()))
+    assert parsear(desanidar(variante())) == original
+
+
+def test_un_invoice_en_un_comentario_no_cuenta() -> None:
+    """La busqueda por texto veia `<Invoice` en cualquier parte, incluso aqui."""
+    with pytest.raises(NoEsUnaFactura):
+        desanidar("<?xml version='1.0'?><OtraCosa><!-- <Invoice> --></OtraCosa>")
 
 
 def test_cabecera(factura) -> None:

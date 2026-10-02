@@ -11,6 +11,7 @@ y lineas con `InvoicedQuantity` fija en 1.00 llevando el importe entero en
 """
 
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 AQUI = Path(__file__).resolve().parent
 
@@ -103,6 +104,25 @@ def construir_adjunto_spd() -> str:
         "<cbc:Description><![CDATA[" + _INVOICE + "]]></cbc:Description>"
         "</cac:ExternalReference></cac:Attachment>"
         "</AttachedDocument>"
+    )
+
+
+def construir_adjunto_escapado() -> str:
+    """El mismo AttachedDocument, con el Invoice escapado con entidades y sin CDATA.
+
+    Para un parser XML es el mismo texto que la version en CDATA; para una
+    busqueda de cadena no, porque `<Invoice` aparece como `&lt;Invoice`.
+    """
+    return construir_adjunto_spd().replace("<![CDATA[" + _INVOICE + "]]>", escape(_INVOICE))
+
+
+def construir_invoice_prefijado() -> str:
+    """El Invoice suelto con la raiz prefijada: `<inv:Invoice xmlns:inv=...>`.
+
+    Es el mismo elemento que `<Invoice xmlns=...>`, solo que con otro prefijo.
+    """
+    return _INVOICE.replace('<Invoice xmlns="urn:', '<inv:Invoice xmlns:inv="urn:', 1).replace(
+        "</Invoice>", "</inv:Invoice>"
     )
 
 
