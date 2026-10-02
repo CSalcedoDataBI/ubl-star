@@ -1,23 +1,27 @@
 # Lector UBL 2.1 — Implementation Plan
 
+> **Histórico.** Plan ejecutado en agosto de 2026 (PR #8). Se conserva como registro de las
+> decisiones; el estado actual está en el [README](../../../README.md) y en el
+> [CHANGELOG](../../../CHANGELOG.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convertir un ZIP de adjunto DIAN (o un XML UBL 2.1 suelto) en el contrato `Invoice`, con cada campo anclado a su ruta del estándar y sin inventar nada.
 
 **Architecture:** Tres piezas con una frontera clara cada una. `zip.py` localiza el XML de la factura dentro del adjunto. `parser.py` desanida el `Invoice` que la DIAN embebe en CDATA dentro del `AttachedDocument` y lo mapea campo por campo al contrato. `schema/` declara ese contrato, y un test de conformidad lo ancla a un documento versionado para que la implementación hermana que lee PDF produzca lo mismo.
 
-**Tech Stack:** Python ≥3.11, pydantic 2, defusedxml, pytest, ruff, mypy, hatchling. Layout `src/`, igual que `pdfstar`.
+**Tech Stack:** Python ≥3.11, pydantic 2, defusedxml, pytest, ruff, mypy, hatchling. Layout `src/`, igual que el lector de PDF hermano.
 
 **Cierra las issues:** #4 (entrada ZIP), #3 (parser), #2 (contrato de salida).
 
 ## Global Constraints
 
-- **Licencias:** solo permisivas (MIT / Apache-2.0 / BSD / PSF). Vetado todo AGPL/GPL. Mismo criterio que `pdfstar`.
+- **Licencias:** solo permisivas (MIT / Apache-2.0 / BSD / PSF). Vetado todo AGPL/GPL. Mismo criterio que el lector de PDF hermano.
 - **Sin datos reales.** Ninguna factura, NIT, cédula, nombre, dirección, contrato, CUDE o serial de medidor real entra a este repo. Las fixtures son inventadas y se generan por código.
-- **El dinero es `Decimal` y el contrato rechaza `float`.** Copiado de `pdfstar/src/pdfstar/schema/__init__.py`: `0.1 + 0.2 != 0.3` y un céntimo de deriva es un descuadre que alguien persigue.
+- **El dinero es `Decimal` y el contrato rechaza `float`.** Copiado de el lector de PDF hermano: `0.1 + 0.2 != 0.3` y un céntimo de deriva es un descuadre que alguien persigue.
 - **Cero inferencia.** Un campo que no está en el XML se reporta ausente (`None`). Nunca se adivina, nunca se calcula un valor que el documento no trae.
 - **Cada campo del contrato se prueba contra su ruta XPath del estándar**, no contra el valor de una fixture.
-- `line-length = 100`, `target-version = "py311"` en ruff. Igual que `pdfstar`.
+- `line-length = 100`, `target-version = "py311"` en ruff. Igual que el lector de PDF hermano.
 - Idioma: código y docstrings en español, mensajes de commit en inglés (convención del repo).
 
 ---
@@ -75,7 +79,7 @@ license = { text = "MIT" }
 authors = [{ name = "Cristobal Salcedo", email = "support@pesanteanalytics.com" }]
 keywords = ["invoice", "ubl", "dian", "peppol", "star-schema", "parquet"]
 
-# Solo licencias permisivas, igual que pdfstar. Nada AGPL/GPL.
+# Solo licencias permisivas, igual que el lector de PDF hermano. Nada AGPL/GPL.
 dependencies = [
     "pydantic>=2.7",      # MIT — contratos de datos
     "defusedxml>=0.7",    # PSF — parseo XML sin XXE ni billion-laughs
@@ -86,7 +90,7 @@ dev = [
     "pytest>=8",
     "pytest-cov>=5",
     # CLAVADA, no `>=`: es un verificador cuyo veredicto cambia con la version.
-    # Mismo criterio que pdfstar — si el hook local y el CI corren versiones
+    # Mismo criterio que el lector de PDF hermano — si el hook local y el CI corren versiones
     # distintas, "verde en local" deja de significar nada.
     "ruff==0.15.4",
     "mypy>=1.11",
@@ -138,7 +142,7 @@ Expected: `1 passed`
 
 - [ ] **Step 7: Escribir el hook anti-contaminación**
 
-`.githooks/pre-commit` — rechaza cualquier XML, ZIP, PDF o imagen fuera de `tests/fixtures/`. Es la misma barrera que `pdfstar`, adaptada a que aquí el documento peligroso es el XML:
+`.githooks/pre-commit` — rechaza cualquier XML, ZIP, PDF o imagen fuera de `tests/fixtures/`. Es la misma barrera que el lector de PDF hermano, adaptada a que aquí el documento peligroso es el XML:
 
 ```sh
 #!/bin/sh
