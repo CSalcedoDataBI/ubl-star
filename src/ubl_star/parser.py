@@ -19,7 +19,7 @@ from xml.etree.ElementTree import Element, ParseError
 
 from defusedxml.ElementTree import fromstring
 
-from ubl_star.schema import Invoice, InvoiceLine
+from ubl_star.schema import Invoice, InvoiceLine, TipoDocumento
 from ubl_star.zip import localizar_xml
 
 NS = {
@@ -28,8 +28,17 @@ NS = {
 }
 
 
+# Raiz UBL -> tipo_documento del contrato. Las tres comparten estructura; lo que
+# cambia esta en _RUTAS.
+TIPOS: dict[str, TipoDocumento] = {
+    "Invoice": "factura",
+    "CreditNote": "nota_credito",
+    "DebitNote": "nota_debito",
+}
+
+
 class NoEsUnaFactura(Exception):
-    """El XML no es un Invoice ni un AttachedDocument que lo contenga."""
+    """El XML no es un Invoice, CreditNote o DebitNote, ni un AttachedDocument que lo contenga."""
 
 
 def _nombre_local(nodo: Element) -> str:
@@ -63,7 +72,7 @@ def desanidar(xml: str) -> str:
     if raiz is None:
         raise NoEsUnaFactura("el texto no es XML bien formado")
 
-    if _nombre_local(raiz) == "Invoice":
+    if _nombre_local(raiz) in TIPOS:
         return xml
 
     if _nombre_local(raiz) == "AttachedDocument":
@@ -72,10 +81,10 @@ def desanidar(xml: str) -> str:
         ):
             bloque = (descripcion.text or "").strip()
             embebido = _raiz(bloque)
-            if embebido is not None and _nombre_local(embebido) == "Invoice":
+            if embebido is not None and _nombre_local(embebido) in TIPOS:
                 return bloque
 
-    raise NoEsUnaFactura("el XML no es un Invoice ni contiene uno embebido")
+    raise NoEsUnaFactura("el XML no es una factura ni una nota, ni contiene una embebida")
 
 
 def _texto(nodo: Element | None, ruta: str) -> str | None:
@@ -140,30 +149,57 @@ def _descuentos(raiz: Element) -> list[dict[str, Any]]:
     return salida
 
 
-def _linea(nodo: Element) -> InvoiceLine:
+def _referencia(raiz: Element) -> dict[str, Any] | None:
+    """La factura que corrige una nota. None si el documento no la trae."""
+    ref = raiz.find("cac:BillingReference/cac:InvoiceDocumentReference", NS)
+    if ref is None:
+        return None
+    return {
+        "numero_factura": _texto(ref, "cbc:ID"),
+        "cufe": _texto(ref, "cbc:UUID"),
+        "fecha_emision": _fecha(ref, "cbc:IssueDate"),
+    }
+
+
+def _linea(nodo: Element, cantidad: str) -> InvoiceLine:
     return InvoiceLine(
         descripcion=_texto(nodo, "cac:Item/cbc:Description"),
-        cantidad=_dinero(nodo, "cbc:InvoicedQuantity"),
+        cantidad=_dinero(nodo, cantidad),
         precio_unitario=_dinero(nodo, "cac:Price/cbc:PriceAmount"),
         importe=_dinero(nodo, "cbc:LineExtensionAmount"),
         codigo=_texto(nodo, "cac:Item/cac:StandardItemIdentification/cbc:ID"),
         extras={
-            "unidad": _atributo(nodo, "cbc:InvoicedQuantity", "unitCode"),
+            "unidad": _atributo(nodo, cantidad, "unitCode"),
             "cuenta": _texto(nodo, "cbc:AccountingCostCode"),
         },
     )
 
 
+# Lo unico que cambia entre los tres documentos: (linea, cantidad, totales).
+# En DebitNote los totales viven en RequestedMonetaryTotal.
+_RUTAS = {
+    "Invoice": ("cac:InvoiceLine", "cbc:InvoicedQuantity", "cac:LegalMonetaryTotal"),
+    "CreditNote": ("cac:CreditNoteLine", "cbc:CreditedQuantity", "cac:LegalMonetaryTotal"),
+    "DebitNote": ("cac:DebitNoteLine", "cbc:DebitedQuantity", "cac:RequestedMonetaryTotal"),
+}
+
+
 def parsear(xml: str) -> Invoice:
-    """Mapea un Invoice UBL 2.1 al contrato. Lo que no esta, no esta."""
+    """Mapea un Invoice, CreditNote o DebitNote UBL 2.1 al contrato.
+
+    Lo que no esta, no esta. Los importes de una nota van tal como vienen, en
+    positivo: el signo lo da `tipo_documento`.
+    """
     raiz = fromstring(xml)
 
-    if _nombre_local(raiz) != "Invoice":
-        raise NoEsUnaFactura(f"la raiz es {raiz.tag}, no un Invoice")
+    nombre = _nombre_local(raiz)
+    if nombre not in TIPOS:
+        raise NoEsUnaFactura(f"la raiz es {raiz.tag}, no un Invoice, CreditNote ni DebitNote")
+    ruta_linea, ruta_cantidad, ruta_totales = _RUTAS[nombre]
 
     proveedor = raiz.find("cac:AccountingSupplierParty/cac:Party", NS)
     cliente = raiz.find("cac:AccountingCustomerParty/cac:Party", NS)
-    totales = raiz.find("cac:LegalMonetaryTotal", NS)
+    totales = raiz.find(ruta_totales, NS)
 
     return Invoice(
         numero_factura=_texto(raiz, "cbc:ID"),
@@ -181,7 +217,8 @@ def parsear(xml: str) -> Invoice:
         # meterlo aqui convertiria cada subsidio en un descuadre falso. Ver el
         # contrato, seccion "Coherencia".
         total=_dinero(totales, "cbc:TaxInclusiveAmount"),
-        lineas=[_linea(n) for n in raiz.findall("cac:InvoiceLine", NS)],
+        tipo_documento=TIPOS[nombre],
+        lineas=[_linea(n, ruta_cantidad) for n in raiz.findall(ruta_linea, NS)],
         extras={
             "ubl_customization_id": _texto(raiz, "cbc:CustomizationID"),
             "ubl_profile_id": _texto(raiz, "cbc:ProfileID"),
@@ -193,6 +230,7 @@ def parsear(xml: str) -> Invoice:
             "ubl_prepaid_amount": _dinero(totales, "cbc:PrepaidAmount"),
             "notas": _notas(raiz),
             "descuentos": _descuentos(raiz),
+            "referencia_factura": _referencia(raiz),
         },
     )
 

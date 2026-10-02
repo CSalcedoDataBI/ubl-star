@@ -8,8 +8,10 @@ import pytest
 
 from tests.fixtures.generar import (
     construir_adjunto_escapado,
+    construir_adjunto_nota,
     construir_adjunto_spd,
     construir_invoice_prefijado,
+    construir_nota,
 )
 from ubl_star.parser import NoEsUnaFactura, desanidar, leer, parsear
 
@@ -129,3 +131,55 @@ def test_leer_acepta_la_ruta_de_un_zip(tmp_path: Path) -> None:
         z.writestr("ds.pdf", b"%PDF-1.4")
 
     assert leer(destino).numero_factura == "DEE00000001"
+
+
+# --- Notas credito y debito (issue #11) ------------------------------------
+
+_NOTAS = [
+    ("CreditNote", "nota_credito", "NC00000001"),
+    ("DebitNote", "nota_debito", "ND00000001"),
+]
+
+
+def test_una_factura_dice_que_es_una_factura(factura) -> None:
+    assert factura.tipo_documento == "factura"
+    assert factura.extras["referencia_factura"] is None
+
+
+@pytest.mark.parametrize("envoltura", ["suelta", "en-attached-document"])
+@pytest.mark.parametrize(("raiz", "tipo", "numero"), _NOTAS, ids=[n[0] for n in _NOTAS])
+def test_las_notas_se_leen_con_su_tipo(raiz: str, tipo: str, numero: str, envoltura: str) -> None:
+    xml = construir_nota(raiz) if envoltura == "suelta" else construir_adjunto_nota(raiz)
+    nota = parsear(desanidar(xml))
+    assert nota.tipo_documento == tipo
+    assert nota.numero_factura == numero
+
+
+@pytest.mark.parametrize(("raiz", "tipo", "numero"), _NOTAS, ids=[n[0] for n in _NOTAS])
+def test_las_notas_traen_totales_y_lineas(raiz: str, tipo: str, numero: str) -> None:
+    """DebitNote guarda los totales en RequestedMonetaryTotal, no en LegalMonetaryTotal."""
+    nota = parsear(construir_nota(raiz))
+    assert nota.subtotal == Decimal("30000.00")
+    assert nota.total == Decimal("30190.00")
+    assert nota.extras["ubl_payable_amount"] == Decimal("27190.00")
+    assert nota.cuadra(), nota.problemas()
+    assert len(nota.lineas) == 2
+    assert nota.lineas[0].cantidad == Decimal("1.00")
+    assert nota.lineas[0].extras["unidad"] == "KWH"
+    assert nota.lineas[1].importe == Decimal("10000.00")
+
+
+@pytest.mark.parametrize(("raiz", "tipo", "numero"), _NOTAS, ids=[n[0] for n in _NOTAS])
+def test_las_notas_traen_la_factura_que_corrigen(raiz: str, tipo: str, numero: str) -> None:
+    nota = parsear(construir_nota(raiz))
+    assert nota.extras["referencia_factura"] == {
+        "numero_factura": "DEE00000001",
+        "cufe": "abc123def456",
+        "fecha_emision": date(2026, 1, 15),
+    }
+
+
+def test_los_importes_de_la_nota_credito_van_en_positivo() -> None:
+    """El contrato guarda el importe tal como viene; el signo lo da tipo_documento."""
+    nota = parsear(construir_nota("CreditNote"))
+    assert nota.total is not None and nota.total > 0

@@ -38,6 +38,23 @@ PrepaidAmount`. El campo `total` del contrato es el total **con impuestos y ante
 de descuentos**; lo pagadero vive en `extras`. Meter el pagadero en `total`
 convertiría cada subsidio en un descuadre falso.
 
+## Notas crédito y débito
+
+Una nota crédito o débito usa el mismo contrato que una factura. Lo que las
+distingue es `tipo_documento`, con tres valores posibles: `factura`,
+`nota_credito` y `nota_debito`.
+
+**Los importes van tal como vienen en el documento, en positivo.** Una nota
+crédito no llega con signo negativo, y el contrato no se lo inventa. Quien suma
+—un total por proveedor, por mes o por año— **resta** las filas con
+`tipo_documento = nota_credito`. Si no lo hace, cada devolución o anulación
+infla el total en vez de descontarlo.
+
+La factura que corrige la nota va en `extras["referencia_factura"]`, con
+`numero_factura`, `cufe` y `fecha_emision`. En una factura, ese valor es `None`.
+
+Añadir `tipo_documento` no rompe v1: es un campo opcional nuevo.
+
 ## Campos
 
 ```yaml
@@ -55,6 +72,7 @@ invoice:
   impuesto_total: money | null
   total: money | null
   orden_compra: str | null
+  tipo_documento: tipo_documento | null
   lineas: list[invoice_line]
   extras: dict
 invoice_line:

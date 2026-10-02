@@ -9,7 +9,7 @@ contabilidad y `0.1 + 0.2 != 0.3` en float.
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
@@ -32,6 +32,11 @@ def _rechaza_float(v: Any) -> Any:
 
 Dinero = Annotated[Decimal, BeforeValidator(_rechaza_float)]
 """Un importe. Acepta texto, entero o Decimal; nunca float."""
+
+
+TipoDocumento = Literal["factura", "nota_credito", "nota_debito"]
+"""Que documento es. Los importes van tal como vienen en el XML (positivos): una
+nota credito resta y eso lo decide el consumidor leyendo este campo."""
 
 
 class Problema(BaseModel):
@@ -98,6 +103,7 @@ class Invoice(_Base):
     impuesto_total: Dinero | None = None
     total: Dinero | None = None
     orden_compra: str | None = None
+    tipo_documento: TipoDocumento | None = None
 
     lineas: list[InvoiceLine] = Field(default_factory=list)
 
