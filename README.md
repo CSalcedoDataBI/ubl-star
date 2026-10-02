@@ -25,8 +25,8 @@ totales— conforme a un [contrato de salida versionado](docs/contrato/factura-v
 > no algo que ya puedas ejecutar — va en
 > [#6](https://github.com/CSalcedoDataBI/ubl-star/issues/6).
 >
-> El perfil probado es el de la **DIAN**. PEPPOL / EN 16931 va en
-> [#5](https://github.com/CSalcedoDataBI/ubl-star/issues/5).
+> Están probados los perfiles **DIAN** y **PEPPOL BIS 3.0 / EN 16931**, cada uno con factura y
+> nota crédito (y nota débito en la DIAN), sobre fixtures sintéticas con su golden file.
 
 ## Por qué existe
 
@@ -40,9 +40,10 @@ venía resuelto en el adjunto.
   transfronteriza.
 
 Un solo parser cubre ambos: lo que cambia entre jurisdicciones son las extensiones y los campos
-fiscales, no la estructura del documento. Es la tesis del proyecto, y por ahora está comprobada
-**solo del lado DIAN** — las fixtures PEPPOL que la pondrían a prueba son
-[#5](https://github.com/CSalcedoDataBI/ubl-star/issues/5).
+fiscales, no la estructura del documento. Es la tesis del proyecto, y las fixtures PEPPOL la
+confirmaron con matices: PEPPOL pone algunos datos en otra ruta que el estándar también admite (el
+vencimiento en `cbc:DueDate`, el IVA en `PartyTaxScheme`, el artículo en `cbc:Name`). El parser lee
+cada una de esas rutas en un orden fijo, y cada una sale del estándar, no de una suposición.
 
 ## Cómo funciona
 
@@ -93,6 +94,14 @@ que ya se clonó.
 
 Las fixtures son sintéticas y se generan por código (`tests/fixtures/generar.py`). Es lo que permite
 que el hook sea tajante: si un documento aparece fuera de `tests/fixtures/`, solo puede ser real.
+
+Cada fixture tiene su **golden file** en `tests/fixtures/golden/`, con la salida completa del parser.
+Si un cambio altera esa salida, el test falla. Si el cambio es deliberado, se regeneran y el diff del
+golden se revisa en el PR:
+
+```bash
+python -m tests.fixtures.generar --golden
+```
 
 ### Verificación manual del hook
 
