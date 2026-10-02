@@ -1,7 +1,9 @@
 {
+  "cargo_total": "0.00",
   "cliente_id_fiscal": "10000001",
   "cliente_nombre": "PERSONA DE PRUEBA",
   "cufe": "abc123def456",
+  "descuento_total": "3000.00",
   "extras": {
     "descuentos": [
       {

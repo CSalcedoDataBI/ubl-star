@@ -1,7 +1,9 @@
 {
+  "cargo_total": null,
   "cliente_id_fiscal": "DE000000000",
   "cliente_nombre": "EXAMPLE BUYER GMBH",
   "cufe": null,
+  "descuento_total": null,
   "extras": {
     "descuentos": [],
     "notas": {},

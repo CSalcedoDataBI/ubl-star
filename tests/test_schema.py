@@ -83,3 +83,56 @@ def test_una_factura_incompleta_no_es_una_incoherencia() -> None:
 
 def test_un_campo_ausente_es_none_no_cero() -> None:
     assert Invoice().total is None
+
+
+# --- Coherencia EN 16931 (issue #21) -----------------------------------------
+# En EN 16931 el total con impuestos ya descuenta los descuentos de documento:
+# BT-112 = BT-106 - BT-107 + BT-108 + BT-110. En la DIAN no: total = subtotal +
+# impuesto. Las dos identidades son del estandar; una factura que cumple
+# cualquiera de las dos cuadra.
+
+
+def test_un_descuento_de_documento_en16931_cuadra() -> None:
+    factura = Invoice(
+        subtotal="1000.00",
+        descuento_total="100.00",
+        impuesto_total="189.00",
+        total="1089.00",
+    )
+    assert factura.cuadra(), factura.problemas()
+
+
+def test_un_cargo_de_documento_en16931_cuadra() -> None:
+    factura = Invoice(
+        subtotal="1000.00", cargo_total="50.00", impuesto_total="220.50", total="1270.50"
+    )
+    assert factura.cuadra(), factura.problemas()
+
+
+def test_la_identidad_dian_sigue_cuadrando_con_descuento_declarado() -> None:
+    """DIAN: el subsidio esta en AllowanceTotalAmount pero no resta del total."""
+    factura = Invoice(
+        subtotal="30000.00",
+        descuento_total="3000.00",
+        impuesto_total="190.00",
+        total="30190.00",
+    )
+    assert factura.cuadra(), factura.problemas()
+
+
+def test_un_total_que_no_cumple_ninguna_identidad_se_reporta() -> None:
+    factura = Invoice(
+        subtotal="1000.00",
+        descuento_total="100.00",
+        impuesto_total="189.00",
+        total="1095.00",
+    )
+    problemas = factura.problemas()
+    assert [p.campo for p in problemas] == ["total"]
+    assert "1089.00" in problemas[0].detalle  # la cuenta EN 16931 que tampoco cuadra
+
+
+def test_sin_descuento_declarado_la_identidad_en16931_no_aplica() -> None:
+    """Sin descuento_total ni cargo_total, la unica identidad es la de siempre."""
+    factura = Invoice(subtotal="1000.00", impuesto_total="189.00", total="1089.00")
+    assert not factura.cuadra()

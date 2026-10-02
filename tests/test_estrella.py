@@ -21,6 +21,16 @@ from tests.fixtures.generar import FIXTURES, construir_peppol_invoice
 from ubl_star.modelo import TABLAS, Modelo, construir, escribir
 
 DIRECTORIO = Path(__file__).resolve().parent / "fixtures"
+
+# Un buzon fijo, no "todas las fixtures": los conteos de abajo (5 documentos,
+# 10 lineas) no deben cambiar cada vez que se anade una fixture.
+BUZON = [
+    "dian_spd_601.xml",
+    "dian_nota_credito.xml",
+    "dian_nota_debito.xml",
+    "peppol_invoice.xml",
+    "peppol_credit_note.xml",
+]
 CONTRATO = Path(__file__).resolve().parents[1] / "docs" / "contrato" / "estrella-v1.md"
 
 _TIPOS: dict[str, pa.DataType] = {
@@ -42,7 +52,8 @@ def _declaradas() -> dict[str, dict[str, str]]:
 def entrada(tmp_path: Path) -> Path:
     carpeta = tmp_path / "buzon"
     carpeta.mkdir()
-    for nombre in FIXTURES:
+    assert set(BUZON) <= set(FIXTURES)  # el buzon solo usa fixtures generadas
+    for nombre in BUZON:
         shutil.copy(DIRECTORIO / nombre, carpeta / nombre)
     return carpeta
 

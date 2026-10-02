@@ -1,25 +1,35 @@
 {
-  "cargo_total": null,
+  "cargo_total": "0.00",
   "cliente_id_fiscal": "DE000000000",
   "cliente_nombre": "EXAMPLE BUYER GMBH",
   "cufe": null,
-  "descuento_total": null,
+  "descuento_total": "100.00",
   "extras": {
-    "descuentos": [],
+    "descuentos": [
+      {
+        "base": null,
+        "codigo_razon": null,
+        "es_recargo": false,
+        "id": null,
+        "importe": "100.00",
+        "porcentaje": null,
+        "razon": "EXAMPLE DISCOUNT"
+      }
+    ],
     "notas": {},
     "referencia_factura": null,
-    "ubl_allowance_total": null,
-    "ubl_charge_total": null,
+    "ubl_allowance_total": "100.00",
+    "ubl_charge_total": "0.00",
     "ubl_customization_id": "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
     "ubl_invoice_type_code": "380",
-    "ubl_payable_amount": "1210.00",
+    "ubl_payable_amount": "1089.00",
     "ubl_prepaid_amount": null,
     "ubl_profile_id": "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
-    "ubl_tax_exclusive_amount": "1000.00"
+    "ubl_tax_exclusive_amount": "900.00"
   },
   "fecha_emision": "2026-03-02",
   "fecha_vencimiento": "2026-04-01",
-  "impuesto_total": "210.00",
+  "impuesto_total": "189.00",
   "lineas": [
     {
       "cantidad": "4",
@@ -45,11 +55,11 @@
     }
   ],
   "moneda": "EUR",
-  "numero_factura": "INV-0001",
+  "numero_factura": "INV-0002",
   "orden_compra": "PO-0001",
   "proveedor_id_fiscal": "NL000000000B01",
   "proveedor_nombre": "EXAMPLE SUPPLIER B.V.",
   "subtotal": "1000.00",
   "tipo_documento": "factura",
-  "total": "1210.00"
+  "total": "1089.00"
 }

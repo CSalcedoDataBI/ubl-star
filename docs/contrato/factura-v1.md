@@ -25,18 +25,30 @@ lo conoce lo ignora.
 
 ## Coherencia
 
-Una factura *cuadra* cuando `total == subtotal + impuesto_total` dentro de una
-tolerancia de `0.02`, y cuando `fecha_vencimiento >= fecha_emision`. Una línea
+Una factura *cuadra* cuando su `total` cumple una de las dos identidades del
+estándar, dentro de una tolerancia de `0.02`, y cuando `fecha_vencimiento >=
+fecha_emision`:
+
+- **DIAN:** `total == subtotal + impuesto_total`.
+- **EN 16931 / PEPPOL** (BT-112), solo si el documento declara `descuento_total` o
+  `cargo_total`: `total == subtotal − descuento_total + cargo_total +
+  impuesto_total`.
+
+`descuento_total` y `cargo_total` son los descuentos y cargos **de documento**
+(`AllowanceTotalAmount` / `ChargeTotalAmount`), tal como vienen. Los añadió v1 sin
+romperla: son campos opcionales nuevos. Una línea
 cuadra cuando `importe == cantidad * precio_unitario` con la misma tolerancia.
 
 Que cuadre no significa que los valores sean correctos: significa que el
 documento es consistente consigo mismo.
 
-**Descuentos y anticipos no entran en esa identidad.** En UBL, lo que se paga es
-`LineExtensionAmount + TaxAmount − AllowanceTotalAmount + ChargeTotalAmount −
-PrepaidAmount`. El campo `total` del contrato es el total **con impuestos y antes
-de descuentos**; lo pagadero vive en `extras`. Meter el pagadero en `total`
-convertiría cada subsidio en un descuadre falso.
+**El total es `TaxInclusiveAmount`, y el estándar se aplica de dos maneras.** La
+DIAN lo calcula antes de los descuentos de documento: un subsidio solo resta en
+lo pagadero. EN 16931 lo calcula después. Por eso se aceptan las dos identidades,
+y una factura PEPPOL con descuento de cabecera no aparece como descuadre. Los
+anticipos no entran en ninguna de las dos. Lo que se paga vive en
+`extras["ubl_payable_amount"]`: meterlo en `total` convertiría cada subsidio en
+un descuadre falso.
 
 ## Notas crédito y débito
 
@@ -71,6 +83,8 @@ invoice:
   subtotal: money | null
   impuesto_total: money | null
   total: money | null
+  descuento_total: money | null
+  cargo_total: money | null
   orden_compra: str | null
   tipo_documento: tipo_documento | null
   lineas: list[invoice_line]
