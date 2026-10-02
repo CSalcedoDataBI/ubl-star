@@ -54,3 +54,13 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["ubl_star"]
+branch = true
+
+[tool.coverage.report]
+# Piso, no meta. Nadie revisa el codigo a mano antes de mergear: el CI es la
+# revision. Si una rama nueva del parser entra sin test, esto la frena.
+fail_under = 90
+show_missing = true

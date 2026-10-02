@@ -49,11 +49,14 @@ jobs:
       - name: Lint (ruff)
         run: python -m ruff check src tests
 
+      - name: Formato (ruff format)
+        run: python -m ruff format --check src tests
+
       - name: Types (mypy --strict)
         run: python -m mypy src
 
-      - name: Tests
-        run: python -m pytest -q
+      - name: Tests + cobertura minima
+        run: python -m pytest -q --cov
 
   hook:
     # La barrera anti-contaminacion es lo unico que impide que una factura real
