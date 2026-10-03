@@ -14,7 +14,8 @@ es **público**, y una fuga no se deshace: un `git rm` posterior no la saca del 
   reprodúcelo con una fixture sintética (ver abajo) o describe la estructura, no los valores.
 - Las fixtures son **sintéticas y se generan por código** en `tests/fixtures/generar.py`. Nadie las
   escribe a mano: así es evidente que cada NIT, nombre e importe salió de ese archivo.
-- El hook `.githooks/pre-commit` bloquea cualquier XML, ZIP, PDF o imagen fuera de `tests/fixtures/`.
+- El hook `.githooks/pre-commit` bloquea cualquier XML, ZIP, PDF o imagen fuera de `tests/fixtures/`,
+  con una sola excepción de ruta exacta: el icono del plugin, `.claude-plugin/icon.png`.
   Git no lo lee por su cuenta: hay que activarlo (siguiente sección).
 
 ## Preparar el entorno

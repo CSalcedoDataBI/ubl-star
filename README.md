@@ -56,12 +56,12 @@ está — y eso se reporta, no se inventa.
 ## Uso
 
 ```bash
-pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4"
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.5"
 ubl-star model ./buzon-de-facturas --salida ./modelo
 ```
 
-`@v0.2.4` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
-no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4"
+`@v0.2.5` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
+no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.5"
 ubl-star model …`.
 
 `ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
