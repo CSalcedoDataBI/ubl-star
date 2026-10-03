@@ -2,13 +2,26 @@
   "name": "ubl-star",
   "displayName": "ubl-star — facturas electrónicas a Power BI",
   "description": "Convierte facturas electrónicas UBL 2.1 (XML o ZIP de la DIAN, PEPPOL / EN 16931) en un esquema estrella en Parquet o CSV, listo para Power BI. Lectura exacta del XML: sin OCR, sin modelo, en local.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": {
     "name": "Cristobal Salcedo",
+    "email": "contacto@csalcedodatabi.com",
     "url": "https://csalcedodatabi.com/"
   },
   "homepage": "https://github.com/CSalcedoDataBI/ubl-star#plugin-de-claude-code",
   "repository": "https://github.com/CSalcedoDataBI/ubl-star",
+  "documentationUrl": "https://github.com/CSalcedoDataBI/ubl-star#readme",
+  "supportUrl": "https://github.com/CSalcedoDataBI/ubl-star/issues",
+  "privacyPolicyUrl": "https://github.com/CSalcedoDataBI/ubl-star/blob/main/PRIVACY.md",
   "license": "MIT",
-  "keywords": ["invoice", "e-invoice", "ubl", "dian", "peppol", "power-bi", "parquet", "star-schema"]
+  "keywords": [
+    "invoice",
+    "e-invoice",
+    "ubl",
+    "dian",
+    "peppol",
+    "power-bi",
+    "parquet",
+    "star-schema"
+  ]
 }

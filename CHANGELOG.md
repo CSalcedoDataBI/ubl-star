@@ -6,8 +6,17 @@ plugin de Claude Code.
 
 ## [Sin publicar]
 
+## [0.2.4] — 2026-10-02
+
+### Añadido
+
+- `PRIVACY.md`: qué ejecuta, descarga y envía el plugin, verificado contra el código ([#14]).
+- Ficha del directorio de Anthropic: email público, `documentationUrl`, `supportUrl` y
+  `privacyPolicyUrl` en `plugin.json` ([#14]).
+
 ### Cambiado
 
+- La descripción de la skill empieza por «Use when», como espera el directorio ([#14]).
 - Evals del plugin: el sandbox se abre solo a GitHub y PyPI, y la suite saca 1.00 en los cuatro casos
   con el plugin (Δ medio +0.58 frente a no tenerlo) ([#24]).
 - Documentación: `CONTRIBUTING.md` y `CHANGELOG.md` propios; el README queda orientado a quien usa la
@@ -73,7 +82,8 @@ plugin de Claude Code.
   `AttachedDocument` y lo mapea al contrato `factura-v1` ([#2], [#3], [#4], [#8]).
 - Barrera anti-contaminación (`.githooks/pre-commit`) y CI en Linux y Windows ([#7], [#10]).
 
-[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.3...HEAD
+[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.0...v0.2.1
@@ -90,6 +100,7 @@ plugin de Claude Code.
 [#11]: https://github.com/CSalcedoDataBI/ubl-star/issues/11
 [#12]: https://github.com/CSalcedoDataBI/ubl-star/issues/12
 [#13]: https://github.com/CSalcedoDataBI/ubl-star/issues/13
+[#14]: https://github.com/CSalcedoDataBI/ubl-star/issues/14
 [#15]: https://github.com/CSalcedoDataBI/ubl-star/pull/15
 [#16]: https://github.com/CSalcedoDataBI/ubl-star/pull/16
 [#17]: https://github.com/CSalcedoDataBI/ubl-star/pull/17
