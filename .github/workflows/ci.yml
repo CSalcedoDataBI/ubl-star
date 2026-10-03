@@ -149,3 +149,17 @@ jobs:
             exit 1
           fi
           echo "OK: pasa"
+
+      - name: Deja pasar el icono del plugin, y solo ese
+        run: |
+          git config core.hooksPath .githooks
+          # La unica excepcion fuera de fixtures es una ruta exacta. Otro PNG en la
+          # misma carpeta (una captura de factura, por ejemplo) debe seguir bloqueado.
+          cp .claude-plugin/icon.png .claude-plugin/captura.png
+          git add -f .claude-plugin/captura.png
+          if git commit -m "debe ser rechazado"; then
+            echo "FALLO: el hook dejo pasar .claude-plugin/captura.png"
+            exit 1
+          fi
+          git restore --staged .claude-plugin/captura.png && rm .claude-plugin/captura.png
+          echo "OK: solo icon.png esta exceptuado"

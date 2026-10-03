@@ -1,7 +1,7 @@
 # Las tablas de `ubl-star model`
 
 Resumen para consultar. El contrato completo, con tipos y reglas, está en
-<https://github.com/CSalcedoDataBI/ubl-star/blob/v0.2.4/docs/contrato/estrella-v1.md>.
+<https://github.com/CSalcedoDataBI/ubl-star/blob/v0.2.5/docs/contrato/estrella-v1.md>.
 
 | Tabla | Grano | Columnas útiles |
 |---|---|---|

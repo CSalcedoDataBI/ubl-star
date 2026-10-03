@@ -6,6 +6,18 @@ plugin de Claude Code.
 
 ## [Sin publicar]
 
+## [0.2.5] — 2026-10-02
+
+### Añadido
+
+- Icono del plugin (`.claude-plugin/icon.png`): un esquema estrella dibujado como estrella, con la
+  paleta del repo. Se genera con `docs/assets/generar_icono.py` ([#14]).
+
+### Cambiado
+
+- El hook anti-contaminación exceptúa esa ruta exacta y ninguna otra; el CI comprueba que otro PNG en
+  la misma carpeta sigue bloqueado.
+
 ## [0.2.4] — 2026-10-02
 
 ### Añadido
@@ -82,7 +94,8 @@ plugin de Claude Code.
   `AttachedDocument` y lo mapea al contrato `factura-v1` ([#2], [#3], [#4], [#8]).
 - Barrera anti-contaminación (`.githooks/pre-commit`) y CI en Linux y Windows ([#7], [#10]).
 
-[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.4...HEAD
+[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.1...v0.2.2
