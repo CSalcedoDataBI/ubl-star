@@ -1,6 +1,6 @@
 ---
 name: leer-facturas-ubl
-description: "Reads UBL 2.1 electronic invoices — DIAN Colombia XML/ZIP (incl. AttachedDocument) or PEPPOL / EN 16931 Invoice, CreditNote, DebitNote — into a Power BI star schema (Parquet/CSV) and answers totals, IVA/VAT, credit-note netting or per-supplier questions, always via the pinned ubl-star CLI, never a hand-written XML parser. Use when the user has a folder of invoice .xml/.zip files or mentions «factura electrónica», «XML de la DIAN», «facturas a Power BI», «nota crédito», «CUFE», «UBL», «PEPPOL», «e-invoice», «invoices to Parquet». Not for PDFs/scans, nor for issuing or signing invoices."
+description: "Use when the user has UBL 2.1 electronic invoices — DIAN Colombia XML/ZIP (incl. AttachedDocument) or PEPPOL / EN 16931 Invoice, CreditNote, DebitNote — or a folder of invoice .xml/.zip files, and wants a Power BI star schema (Parquet/CSV) or totals, IVA/VAT, credit-note netting or per-supplier figures. Runs the pinned ubl-star CLI, never a hand-written XML parser. Triggers: «factura electrónica», «XML de la DIAN», «facturas a Power BI», «nota crédito», «CUFE», «UBL», «PEPPOL», «e-invoice», «invoices to Parquet». Not for PDFs/scans, nor for issuing or signing invoices."
 ---
 
 # Leer facturas UBL con ubl-star
@@ -20,15 +20,15 @@ deduzcas un campo que no venga en el documento.
 ## 2. Ejecutar la CLI fijada
 
 ```bash
-uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3" ubl-star model <rutas...> --salida <carpeta>
+uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4" ubl-star model <rutas...> --salida <carpeta>
 ```
 
 - Escribe en `<carpeta>`: `dim_proveedor`, `dim_item`, `dim_fecha`, `fact_factura`,
   `fact_factura_linea` (Parquet por defecto; `--formato csv` para CSV) y `rechazados.csv`.
 - Si el usuario no da carpeta, usa `./ubl-star-salida`. Los archivos con el mismo
   nombre se sobrescriben.
-- Usa siempre la versión fijada (`@v0.2.3`), nunca una rama.
-- Sin `uv`: `pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3"`
+- Usa siempre la versión fijada (`@v0.2.4`), nunca una rama.
+- Sin `uv`: `pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4"`
   y después `ubl-star model ...` (o `python -m ubl_star model ...`).
 - Requiere `git` y Python ≥ 3.11. Si la instalación falla, muestra el error y para:
   **no** lo sustituyas con código propio que lea el XML.
@@ -44,7 +44,7 @@ CLI. pyarrow ya viene con el paquete. Escribe el script en una carpeta temporal,
 no en la del usuario:
 
 ```bash
-uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3" python script.py
+uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4" python script.py
 ```
 
 - **Qué columna:** «el total» de un documento es `total` (con impuestos); «cuánto

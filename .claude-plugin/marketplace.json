@@ -11,7 +11,7 @@
     {
       "name": "ubl-star",
       "source": "./",
-      "description": "Convierte facturas electrónicas UBL 2.1 (XML o ZIP de la DIAN, PEPPOL / EN 16931) en un esquema estrella en Parquet o CSV, listo para Power BI."
+      "description": "Convierte facturas electrónicas UBL 2.1 (XML o ZIP de la DIAN, PEPPOL / EN 16931) en un esquema estrella en Parquet o CSV, listo para Power BI. Lectura exacta del XML: sin OCR, sin modelo, en local."
     }
   ]
 }

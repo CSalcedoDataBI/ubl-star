@@ -56,12 +56,12 @@ está — y eso se reporta, no se inventa.
 ## Uso
 
 ```bash
-pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3"
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4"
 ubl-star model ./buzon-de-facturas --salida ./modelo
 ```
 
-`@v0.2.3` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
-no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.3"
+`@v0.2.4` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
+no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.4"
 ubl-star model …`.
 
 `ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
@@ -107,7 +107,7 @@ parser propio.
 
 Requisitos: [`uv`](https://docs.astral.sh/uv/) (o `pip`), `git` y Python ≥ 3.11.
 
-### Qué ejecuta, qué envía y qué descarga
+### Qué ejecuta, qué envía y qué descarga (what it runs, sends and fetches)
 
 - **Ejecuta** la CLI de `ubl-star` en tu máquina, **fijada a una versión exacta**:
   `uvx --from git+https://github.com/CSalcedoDataBI/ubl-star@vX.Y.Z ubl-star model ...`. Para
@@ -119,6 +119,8 @@ Requisitos: [`uv`](https://docs.astral.sh/uv/) (o `pip`), `git` y Python ≥ 3.1
   sale de tu máquina es lo que Claude lee de la salida, que entra en la conversación. Por eso la CLI
   solo imprime conteos, y la skill entrega archivos y agregados en vez de volcar filas con nombres,
   NIT o cédulas.
+
+Política de privacidad del plugin: [PRIVACY.md](PRIVACY.md).
 
 ### Evals
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ubl-star"
-version = "0.2.3"
+version = "0.2.4"
 description = "De factura electronica UBL 2.1 a hechos listos para analizar."
 readme = "README.md"
 requires-python = ">=3.11"
