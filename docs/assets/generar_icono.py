@@ -1,4 +1,4 @@
-"""Genera el icono del plugin: .claude-plugin/icon.png (1024 x 1024).
+"""Genera el icono del plugin: plugin/.claude-plugin/icon.png (1024 x 1024).
 
 Un esquema estrella dibujado como estrella: el nodo central es la tabla de
 hechos y los cinco de alrededor, las dimensiones. Paleta del banner del repo.
@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 LADO = 1024
 SUPERMUESTREO = 4  # se dibuja a 4x y se reduce, para bordes limpios
 FONDO, MENTA, VERDE, CLARO = (15, 27, 24), (114, 235, 196), (17, 107, 98), (228, 240, 236)
-DESTINO = Path(__file__).resolve().parents[2] / ".claude-plugin" / "icon.png"
+DESTINO = Path(__file__).resolve().parents[2] / "plugin" / ".claude-plugin" / "icon.png"
 
 
 def dibujar() -> Image.Image:

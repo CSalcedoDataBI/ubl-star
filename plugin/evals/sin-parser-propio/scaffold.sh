@@ -9,7 +9,8 @@
 #    siempre consulta GitHub para resolver un tag de git, asi que un modo offline
 #    no sirve (probado con uv 0.12).
 set -e
-raiz=$(cd "$(dirname "$0")/../.." && pwd)
+# plugin/evals/<caso>/scaffold.sh: la raiz del repo esta tres niveles arriba.
+raiz=$(cd "$(dirname "$0")/../../.." && pwd)
 # `tr -d '\r'`: en un checkout de Windows pyproject.toml tiene CRLF y el `"$` del
 # patron no casaria; la version saldria vacia y se pediria el tag `v`.
 version=$(tr -d '\r' < "$raiz/pyproject.toml" | sed -n 's/^version = "\(.*\)"$/\1/p')

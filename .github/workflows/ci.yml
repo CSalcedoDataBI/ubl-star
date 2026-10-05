@@ -78,9 +78,9 @@ jobs:
 
       - name: Validar plugin, marketplace y skill
         run: |
-          claude plugin validate --strict .claude-plugin/plugin.json
+          claude plugin validate --strict plugin/.claude-plugin/plugin.json
           claude plugin validate --strict .claude-plugin/marketplace.json
-          claude plugin validate --strict skills
+          claude plugin validate --strict plugin/skills
 
   hook:
     # La barrera anti-contaminacion es lo unico que impide que una factura real
@@ -155,11 +155,11 @@ jobs:
           git config core.hooksPath .githooks
           # La unica excepcion fuera de fixtures es una ruta exacta. Otro PNG en la
           # misma carpeta (una captura de factura, por ejemplo) debe seguir bloqueado.
-          cp .claude-plugin/icon.png .claude-plugin/captura.png
-          git add -f .claude-plugin/captura.png
+          cp plugin/.claude-plugin/icon.png plugin/.claude-plugin/captura.png
+          git add -f plugin/.claude-plugin/captura.png
           if git commit -m "debe ser rechazado"; then
-            echo "FALLO: el hook dejo pasar .claude-plugin/captura.png"
+            echo "FALLO: el hook dejo pasar plugin/.claude-plugin/captura.png"
             exit 1
           fi
-          git restore --staged .claude-plugin/captura.png && rm .claude-plugin/captura.png
+          git restore --staged plugin/.claude-plugin/captura.png && rm plugin/.claude-plugin/captura.png
           echo "OK: solo icon.png esta exceptuado"

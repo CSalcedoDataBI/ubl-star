@@ -66,7 +66,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude plugin eval . \
+          claude plugin eval plugin \
             --trust-plugin --scaffold \
             --allow-tools Bash "WebFetch(domain:github.com)" "WebFetch(domain:pypi.org)" "WebFetch(domain:files.pythonhosted.org)" \
             --runs "${{ inputs.runs }}" \

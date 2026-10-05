@@ -229,4 +229,4 @@ __marimo__/
 .superpowers/
 
 # Resultados de `claude plugin eval`: se regeneran en cada corrida.
-evals/results/
+**/evals/results/

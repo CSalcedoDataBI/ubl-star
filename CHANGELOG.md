@@ -6,6 +6,16 @@ plugin de Claude Code.
 
 ## [Sin publicar]
 
+## [0.2.6] — 2026-10-05
+
+### Cambiado
+
+- **El plugin vive en `plugin/`** y ya no es el repositorio entero: cada usuario instala 25 archivos
+  (manifiesto, icono, skill, evals, README, LICENSE, PRIVACY) en vez de 74. El código, los tests y
+  las fixtures llegan con la CLI fijada, no con el plugin. El marketplace sigue en la raíz, así que la
+  instalación no cambia ([#14]).
+- `PRIVACY.md` y `LICENSE` se copian a `plugin/`; un test exige que sean idénticas a las de la raíz.
+
 ## [0.2.5] — 2026-10-02
 
 ### Añadido
@@ -94,7 +104,8 @@ plugin de Claude Code.
   `AttachedDocument` y lo mapea al contrato `factura-v1` ([#2], [#3], [#4], [#8]).
 - Barrera anti-contaminación (`.githooks/pre-commit`) y CI en Linux y Windows ([#7], [#10]).
 
-[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.5...HEAD
+[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.2...v0.2.3

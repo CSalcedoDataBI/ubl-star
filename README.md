@@ -56,12 +56,12 @@ está — y eso se reporta, no se inventa.
 ## Uso
 
 ```bash
-pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.5"
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6"
 ubl-star model ./buzon-de-facturas --salida ./modelo
 ```
 
-`@v0.2.5` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
-no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.5"
+`@v0.2.6` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
+no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6"
 ubl-star model …`.
 
 `ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
@@ -95,7 +95,7 @@ factura.cuadra(), factura.problemas()
 
 ## Plugin de Claude Code
 
-Este repositorio también es un **plugin de Claude Code**, con una sola skill:
+La carpeta [`plugin/`](plugin/) es un **plugin de Claude Code**, con una sola skill:
 `leer-facturas-ubl`. Le dices a Claude «convierte estas facturas de la DIAN en tablas para Power BI»
 o «¿cuánto IVA hay en esta carpeta?», y Claude llama a la CLI de `ubl-star` en vez de escribir un
 parser propio.
@@ -124,7 +124,7 @@ Política de privacidad del plugin: [PRIVACY.md](PRIVACY.md).
 
 ### Evals
 
-`evals/` mide el plugin con y sin él sobre las fixtures sintéticas. La última corrida (3 por caso):
+`plugin/evals/` mide el plugin con y sin él sobre las fixtures sintéticas. La última corrida (3 por caso):
 
 | Caso | Con plugin | Sin plugin |
 |---|---|---|
