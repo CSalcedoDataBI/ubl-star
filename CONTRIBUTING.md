@@ -15,7 +15,7 @@ es **público**, y una fuga no se deshace: un `git rm` posterior no la saca del 
 - Las fixtures son **sintéticas y se generan por código** en `tests/fixtures/generar.py`. Nadie las
   escribe a mano: así es evidente que cada NIT, nombre e importe salió de ese archivo.
 - El hook `.githooks/pre-commit` bloquea cualquier XML, ZIP, PDF o imagen fuera de `tests/fixtures/`,
-  con una sola excepción de ruta exacta: el icono del plugin, `.claude-plugin/icon.png`.
+  con una sola excepción de ruta exacta: el icono del plugin, `plugin/.claude-plugin/icon.png`.
   Git no lo lee por su cuenta: hay que activarlo (siguiente sección).
 
 ## Preparar el entorno
@@ -75,8 +75,8 @@ Añadir un campo opcional no rompe v1; quitar o renombrar un campo, o cambiarle 
 La versión vive en tres sitios que deben coincidir, y `tests/test_plugin.py` falla si se separan:
 
 - `pyproject.toml` (y `src/ubl_star/__init__.py`);
-- `.claude-plugin/plugin.json`;
-- el pin `@vX.Y.Z` en `skills/leer-facturas-ubl/` (el plugin llama a la CLI fijada a ese tag).
+- `plugin/.claude-plugin/plugin.json`;
+- el pin `@vX.Y.Z` en `plugin/skills/leer-facturas-ubl/` (el plugin llama a la CLI fijada a ese tag).
 
 **Cualquier cambio del paquete o del plugin sube la versión** y se anota en `CHANGELOG.md`. Al mergear
 a `main`, `.github/workflows/release.yml` crea el tag `vX.Y.Z` si todavía no existe. Un tag publicado
@@ -84,11 +84,11 @@ no se mueve.
 
 ## Evals del plugin
 
-`evals/` mide si la skill se activa y si las respuestas son correctas, con y sin el plugin, sobre las
+`plugin/evals/` mide si la skill se activa y si las respuestas son correctas, con y sin el plugin, sobre las
 fixtures sintéticas:
 
 ```bash
-claude plugin eval . --scaffold --trust-plugin --allow-tools Bash "WebFetch(domain:github.com)" "WebFetch(domain:pypi.org)" "WebFetch(domain:files.pythonhosted.org)"
+claude plugin eval plugin --scaffold --trust-plugin --allow-tools Bash "WebFetch(domain:github.com)" "WebFetch(domain:pypi.org)" "WebFetch(domain:files.pythonhosted.org)"
 ```
 
 - `--allow-tools Bash` hace falta porque la skill ejecuta la CLI. Ese Bash corre en un sandbox **sin

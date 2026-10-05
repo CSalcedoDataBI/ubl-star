@@ -16,8 +16,9 @@ import yaml
 import ubl_star
 
 RAIZ = Path(__file__).resolve().parents[1]
-MANIFIESTO = RAIZ / ".claude-plugin" / "plugin.json"
-SKILL = RAIZ / "skills" / "leer-facturas-ubl" / "SKILL.md"
+PLUGIN = RAIZ / "plugin"
+MANIFIESTO = PLUGIN / ".claude-plugin" / "plugin.json"
+SKILL = PLUGIN / "skills" / "leer-facturas-ubl" / "SKILL.md"
 
 
 def _version_paquete() -> str:
@@ -66,7 +67,7 @@ def test_la_skill_nunca_apunta_a_una_rama() -> None:
         assert re.search(r"(@|/blob/)v\d+\.\d+\.\d+", url), url
 
 
-EVALS = RAIZ / "evals"
+EVALS = PLUGIN / "evals"
 
 
 def test_los_scaffolds_de_los_evals_son_identicos() -> None:
@@ -118,7 +119,7 @@ def test_el_manifiesto_lleva_lo_que_pide_el_directorio() -> None:
         "repository",
     ):
         assert manifiesto.get(campo), campo
-    assert (RAIZ / "LICENSE").is_file()
+    assert (PLUGIN / "LICENSE").is_file()
 
 
 def test_ningun_archivo_del_plugin_pasa_de_256_kib() -> None:
@@ -138,3 +139,29 @@ def test_ningun_archivo_del_plugin_pasa_de_256_kib() -> None:
         if nombre and (RAIZ / nombre).is_file() and (RAIZ / nombre).stat().st_size >= 256 * 1024
     ]
     assert grandes == []
+
+
+def test_la_carpeta_del_plugin_solo_lleva_lo_que_se_instala() -> None:
+    """Todo lo que hay en plugin/ se copia a cada usuario. El codigo, los tests y
+    las fixtures se instalan con la CLI fijada, no con el plugin."""
+    permitidos = {".claude-plugin", "skills", "evals", "README.md", "LICENSE", "PRIVACY.md"}
+    presentes = {p.name for p in PLUGIN.iterdir()}
+    assert presentes <= permitidos, presentes - permitidos
+
+
+def test_privacy_y_license_del_plugin_son_las_del_repo() -> None:
+    """La web enlaza el PRIVACY.md de la raiz; el directorio lee el de plugin/.
+    Dos copias, una sola verdad."""
+    for nombre in ("PRIVACY.md", "LICENSE"):
+        raiz = (RAIZ / nombre).read_text(encoding="utf-8")
+        assert (PLUGIN / nombre).read_text(encoding="utf-8") == raiz, nombre
+
+
+def test_el_marketplace_apunta_a_la_carpeta_del_plugin() -> None:
+    marketplace = json.loads(
+        (RAIZ / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
+    )
+    (entrada,) = marketplace["plugins"]
+    assert entrada["source"] == "./plugin"
+    manifiesto = json.loads(MANIFIESTO.read_text(encoding="utf-8"))
+    assert entrada["description"] == manifiesto["description"]
