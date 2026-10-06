@@ -16,6 +16,21 @@
         "razon": "SUBSIDIO"
       }
     ],
+    "impuestos": [
+      {
+        "base": "1000.00",
+        "codigo": "01",
+        "impuesto": "190.00",
+        "nombre": "IVA",
+        "porcentaje": "19.00"
+      }
+    ],
+    "medios_pago": [
+      {
+        "codigo": "ZZZ",
+        "forma": "2"
+      }
+    ],
     "notas": {
       "Cuota Financiacion": "1000.00",
       "contrato": "99999999",
@@ -33,6 +48,7 @@
   },
   "fecha_emision": "2026-01-15",
   "fecha_vencimiento": "2026-02-05",
+  "forma_pago": "2",
   "impuesto_total": "190.00",
   "lineas": [
     {
@@ -58,6 +74,7 @@
       "precio_unitario": "10000.00"
     }
   ],
+  "medio_pago_codigo": "ZZZ",
   "moneda": "COP",
   "numero_factura": "DEE00000001",
   "orden_compra": null,

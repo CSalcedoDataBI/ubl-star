@@ -29,6 +29,32 @@ def nota() -> Invoice:
     return parsear(desanidar(construir_peppol_credit_note()))
 
 
+def test_el_iva_en_moneda_de_contabilidad_no_se_suma_dos_veces() -> None:
+    """EN 16931 BT-111: un segundo TaxTotal con el mismo IVA en otra moneda.
+
+    Es el mismo impuesto expresado en la moneda de contabilidad (`TaxCurrencyCode`),
+    no un segundo tributo: sumarlo inflaria `impuesto_total`.
+    """
+    xml = construir_peppol_invoice().replace(
+        "<cac:LegalMonetaryTotal>",
+        '<cac:TaxTotal><cbc:TaxAmount currencyID="SEK">2400.00</cbc:TaxAmount></cac:TaxTotal>'
+        "<cac:LegalMonetaryTotal>",
+    )
+    factura = parsear(xml)
+    assert factura.impuesto_total == Decimal("210.00")
+    assert [t["codigo"] for t in factura.extras["impuestos"]] == ["VAT"]
+    assert factura.cuadra()
+
+
+def test_un_tax_total_sin_importe_deja_el_impuesto_en_none() -> None:
+    """Sumar solo los que traen importe daria un total parcial con cara de completo."""
+    xml = construir_peppol_invoice().replace(
+        "<cac:LegalMonetaryTotal>",
+        "<cac:TaxTotal><cac:TaxSubtotal/></cac:TaxTotal><cac:LegalMonetaryTotal>",
+    )
+    assert parsear(xml).impuesto_total is None
+
+
 def test_cabecera(factura: Invoice) -> None:
     assert factura.tipo_documento == "factura"
     assert factura.numero_factura == "INV-0001"

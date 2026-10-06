@@ -106,6 +106,11 @@ class Invoice(_Base):
     cargo_total: Dinero | None = None
     orden_compra: str | None = None
     tipo_documento: TipoDocumento | None = None
+    forma_pago: str | None = None
+    """`cac:PaymentMeans/cbc:ID` tal como viene: en la DIAN, 1 contado y 2 credito."""
+    medio_pago_codigo: str | None = None
+    """`cbc:PaymentMeansCode` tal como viene (10, 42, 47, 48, 49, ZZZ...). La lista
+    de codigos es de la DIAN o de UNCL 4461; el contrato no la traduce."""
 
     lineas: list[InvoiceLine] = Field(default_factory=list)
 

@@ -56,6 +56,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"ubl-star model: {documentos} documentos, {lineas} lineas, "
         f"{rechazados} rechazados -> {args.salida}"
     )
+    # Un descuadre no rechaza el documento, pero tampoco pasa en silencio. Solo el
+    # conteo: cual es, lo dice la columna `cuadra` de fact_factura.
+    descuadres = modelo.tablas["fact_factura"].column("cuadra").to_pylist().count(False)
+    if descuadres:
+        print(f"  {descuadres} documentos no cuadran: filtra cuadra = false en fact_factura")
     if rechazados:
         print(f"  revisa {args.salida / 'rechazados.csv'}")
         return 1
