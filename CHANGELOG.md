@@ -6,6 +6,11 @@ plugin de Claude Code.
 
 ## [Sin publicar]
 
+### Corregido
+
+- `release.yml`: re-ejecutar una corrida cuyo tag se creó pero cuyo avance de `stable` falló ya mueve
+  `stable`. El paso compara `stable` con el commit y solo avanza (sin forzar) si está detrás.
+
 ## [0.2.6] — 2026-10-05
 
 ### Cambiado

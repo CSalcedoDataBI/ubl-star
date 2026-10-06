@@ -33,7 +33,13 @@ jobs:
           version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           tag="v$version"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag ya existe en $(git rev-list -n1 "$tag"); no se toca."
+            tag_sha=$(git rev-parse "$tag^{commit}")
+            echo "$tag ya existe en $tag_sha; no se toca."
+            # Un rerun de esta misma corrida encuentra el tag que ella misma empujo.
+            # Si stable fallo la primera vez, hay que reintentarlo, no darlo por hecho.
+            if [ "$tag_sha" = "$GITHUB_SHA" ]; then
+              echo "mover=true" >> "$GITHUB_OUTPUT"
+            fi
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -42,14 +48,32 @@ jobs:
           git push origin "$tag"
           echo "creado $tag en $GITHUB_SHA"
           echo "creado=true" >> "$GITHUB_OUTPUT"
+          echo "mover=true" >> "$GITHUB_OUTPUT"
 
       # El directorio de plugins de claude.ai sigue la rama `stable`, no `main`: revisa
       # cada commit que llega a la rama que sigue, y cada uno sustituye al que estaba en
       # revision. `stable` avanza aqui y solo aqui, al commit de la version recien creada.
       # Avance rapido sin forzar (y un ruleset lo impide igualmente): si alguna vez no lo
       # es, este paso falla en vez de reescribir lo que el revisor ya leyo.
+      # Idempotente: corre tambien cuando el tag ya existia en este mismo commit (rerun
+      # tras un fallo aqui) y solo actua si stable todavia no contiene el commit.
       - name: Mover stable a la nueva version
-        if: steps.tag.outputs.creado == 'true'
+        if: steps.tag.outputs.mover == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X PATCH "repos/${{ github.repository }}/git/refs/heads/stable" -f sha="$GITHUB_SHA" -F force=false
+        run: |
+          repo="${{ github.repository }}"
+          estado=$(gh api "repos/$repo/compare/stable...$GITHUB_SHA" --jq .status)
+          case "$estado" in
+            ahead)
+              gh api -X PATCH "repos/$repo/git/refs/heads/stable" -f sha="$GITHUB_SHA" -F force=false
+              echo "stable avanzado a $GITHUB_SHA"
+              ;;
+            identical|behind)
+              echo "stable ya contiene $GITHUB_SHA ($estado); nada que hacer."
+              ;;
+            *)
+              echo "::error::stable no es ancestro de $GITHUB_SHA (estado: $estado); no se fuerza."
+              exit 1
+              ;;
+          esac
