@@ -20,15 +20,15 @@ deduzcas un campo que no venga en el documento.
 ## 2. Ejecutar la CLI fijada
 
 ```bash
-uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6" ubl-star model <rutas...> --salida <carpeta>
+uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.7" ubl-star model <rutas...> --salida <carpeta>
 ```
 
 - Escribe en `<carpeta>`: `dim_proveedor`, `dim_item`, `dim_fecha`, `fact_factura`,
   `fact_factura_linea` (Parquet por defecto; `--formato csv` para CSV) y `rechazados.csv`.
 - Si el usuario no da carpeta, usa `./ubl-star-salida`. Los archivos con el mismo
   nombre se sobrescriben.
-- Usa siempre la versión fijada (`@v0.2.6`), nunca una rama.
-- Sin `uv`: `pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6"`
+- Usa siempre la versión fijada (`@v0.2.7`), nunca una rama.
+- Sin `uv`: `pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.7"`
   y después `ubl-star model ...` (o `python -m ubl_star model ...`).
 - Requiere `git` y Python ≥ 3.11. Si la instalación falla, muestra el error y para:
   **no** lo sustituyas con código propio que lea el XML.
@@ -44,11 +44,17 @@ CLI. pyarrow ya viene con el paquete. Escribe el script en una carpeta temporal,
 no en la del usuario:
 
 ```bash
-uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6" python script.py
+uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.7" python script.py
 ```
 
 - **Qué columna:** «el total» de un documento es `total` (con impuestos); «cuánto
-  se paga» es `pagadero`; el IVA es `impuesto_total`.
+  se paga» es `pagadero`; todos los impuestos juntos son `impuesto_total`. **El IVA
+  solo** sale de `fact_factura_impuesto` con `tributo_codigo = '01'` (INC `04`,
+  ICA `03`, `VAT` en PEPPOL): una factura de restaurante trae IVA e INC.
+- **Medio de pago:** `fact_factura.medio_pago_codigo` (`10` efectivo, `42`, `47`,
+  `48`, `49` electrónicos, `ZZZ` otro) y `forma_pago` (`1` contado, `2` crédito).
+- **`cuadra = false`** marca un documento cuyo total no cumple la identidad del
+  estándar. Dilo en la respuesta si alguno entra en la cifra.
 - **Las notas crédito restan.** Los importes vienen en positivo; `signo` vale `-1`
   en `nota_credito` y `+1` en factura y `nota_debito`. Neto = `SUM(columna * signo)`
   (`total`, `impuesto_total` o, por línea, `importe`).
