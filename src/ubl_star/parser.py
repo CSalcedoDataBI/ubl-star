@@ -175,6 +175,60 @@ def _referencia(raiz: Element) -> dict[str, Any] | None:
     }
 
 
+def _totales_de_impuesto(raiz: Element) -> list[Element]:
+    """Los cac:TaxTotal de cabecera que estan en la moneda del documento.
+
+    La DIAN emite uno por tributo (IVA `01`, INC `04`, ICA `03`...), asi que hay
+    que sumarlos todos y no tomar el primero. EN 16931 admite un segundo TaxTotal
+    con el mismo impuesto expresado en la moneda de contabilidad (BT-111, con
+    otro `currencyID`): ese no se suma, porque es el mismo dinero dos veces. Un
+    TaxAmount sin `currencyID` se toma como de la moneda del documento.
+    """
+    moneda = _texto(raiz, "cbc:DocumentCurrencyCode")
+    salida: list[Element] = []
+    for total in raiz.findall("cac:TaxTotal", NS):
+        importe = total.find("cbc:TaxAmount", NS)
+        divisa = importe.get("currencyID") if importe is not None else None
+        if moneda is None or divisa is None or divisa == moneda:
+            salida.append(total)
+    return salida
+
+
+def _impuesto_total(totales: list[Element]) -> Decimal | None:
+    """La suma, o None si algun TaxTotal no trae su importe: una suma parcial
+    pareceria completa y subestimaria el impuesto sin decirlo."""
+    importes = [_dinero(t, "cbc:TaxAmount") for t in totales]
+    if not importes or any(i is None for i in importes):
+        return None
+    return sum((i for i in importes if i is not None), Decimal(0))
+
+
+def _impuestos(totales: list[Element]) -> list[dict[str, Any]]:
+    """El desglose por tributo: un elemento por cac:TaxSubtotal, tal como viene."""
+    salida: list[dict[str, Any]] = []
+    for total in totales:
+        for sub in total.findall("cac:TaxSubtotal", NS):
+            salida.append(
+                {
+                    "codigo": _texto(sub, "cac:TaxCategory/cac:TaxScheme/cbc:ID"),
+                    "nombre": _texto(sub, "cac:TaxCategory/cac:TaxScheme/cbc:Name"),
+                    "porcentaje": _dinero(sub, "cac:TaxCategory/cbc:Percent"),
+                    "base": _dinero(sub, "cbc:TaxableAmount"),
+                    "impuesto": _dinero(sub, "cbc:TaxAmount"),
+                }
+            )
+    return salida
+
+
+def _medios_pago(raiz: Element) -> list[dict[str, Any]]:
+    """Cada cac:PaymentMeans: `forma` es el cbc:ID de la DIAN (1 contado, 2
+    credito) y `codigo` el PaymentMeansCode (10 efectivo, 48 tarjeta...)."""
+    return [
+        {"forma": _texto(medio, "cbc:ID"), "codigo": _texto(medio, "cbc:PaymentMeansCode")}
+        for medio in raiz.findall("cac:PaymentMeans", NS)
+    ]
+
+
 def _linea(nodo: Element, cantidad: str) -> InvoiceLine:
     return InvoiceLine(
         # PEPPOL: cbc:Name es obligatorio (BT-153) y cbc:Description opcional (BT-154).
@@ -227,6 +281,10 @@ def parsear(xml: str) -> Invoice:
     proveedor = raiz.find("cac:AccountingSupplierParty/cac:Party", NS)
     cliente = raiz.find("cac:AccountingCustomerParty/cac:Party", NS)
     totales = raiz.find(ruta_totales, NS)
+    impuestos = _totales_de_impuesto(raiz)
+    # Si hay varios PaymentMeans manda el primero; la lista entera va en extras.
+    medios = _medios_pago(raiz)
+    medio = medios[0] if medios else {"forma": None, "codigo": None}
 
     return Invoice(
         numero_factura=_texto(raiz, "cbc:ID"),
@@ -241,7 +299,7 @@ def parsear(xml: str) -> Invoice:
         cliente_id_fiscal=_primero(cliente, *_ID_FISCAL),
         moneda=_texto(raiz, "cbc:DocumentCurrencyCode"),
         subtotal=_dinero(totales, "cbc:LineExtensionAmount"),
-        impuesto_total=_dinero(raiz, "cac:TaxTotal/cbc:TaxAmount"),
+        impuesto_total=_impuesto_total(impuestos),
         # TaxInclusiveAmount y no PayableAmount: lo pagadero resta descuentos y
         # meterlo aqui convertiria cada subsidio en un descuadre falso. Ver el
         # contrato, seccion "Coherencia".
@@ -250,6 +308,8 @@ def parsear(xml: str) -> Invoice:
         cargo_total=_dinero(totales, "cbc:ChargeTotalAmount"),
         orden_compra=_texto(raiz, "cac:OrderReference/cbc:ID"),
         tipo_documento=TIPOS[nombre],
+        forma_pago=medio["forma"],
+        medio_pago_codigo=medio["codigo"],
         lineas=[_linea(n, ruta_cantidad) for n in raiz.findall(ruta_linea, NS)],
         extras={
             "ubl_customization_id": _texto(raiz, "cbc:CustomizationID"),
@@ -263,6 +323,8 @@ def parsear(xml: str) -> Invoice:
             "notas": _notas(raiz),
             "descuentos": _descuentos(raiz),
             "referencia_factura": _referencia(raiz),
+            "impuestos": _impuestos(impuestos),
+            "medios_pago": medios,
         },
     )
 

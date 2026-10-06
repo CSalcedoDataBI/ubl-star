@@ -1,6 +1,6 @@
 # Contrato de salida — esquema estrella v1
 
-Lo que produce `ubl-star model`: cinco tablas en Parquet (o CSV), listas para
+Lo que produce `ubl-star model`: seis tablas en Parquet (o CSV), listas para
 cargar en Power BI o en cualquier motor que lea Parquet. Igual que
 [`factura-v1.md`](factura-v1.md), este documento **es** el contrato:
 `tests/test_estrella.py` falla si las tablas que se escriben se apartan del
@@ -9,7 +9,7 @@ bloque de abajo.
 ## Versión
 
 `1`. Quitar una columna, cambiarle el tipo o el nombre es **ruptura** y sube a
-v2. Añadir una columna no rompe.
+v2. Añadir una columna o una tabla no rompe: las columnas nuevas van al final.
 
 ## Las tablas
 
@@ -20,6 +20,7 @@ v2. Añadir una columna no rompe.
 | `dim_fecha` | un día | `fecha_key` (`AAAAMMDD`) |
 | `fact_factura` | un documento (factura o nota) | `numero_factura` + `proveedor_key` + `tipo_documento` |
 | `fact_factura_linea` | una línea de un documento | `numero_factura` + `proveedor_key` + `tipo_documento` + `linea_numero` |
+| `fact_factura_impuesto` | un tributo y tarifa de un documento | `numero_factura` + `proveedor_key` + `tipo_documento` + `tributo_codigo` + `porcentaje` |
 
 Relaciones: `fact_* .proveedor_key → dim_proveedor`, `fact_factura_linea.item_key
 → dim_item`, `fact_* .fecha_emision_key` y `fecha_vencimiento_key → dim_fecha`.
@@ -47,12 +48,25 @@ verifica).
 - **Un documento repetido se cuenta una vez.** Si el mismo `tipo_documento` +
   proveedor + `numero_factura` llega dos veces (por ejemplo, en el ZIP y suelto),
   el segundo se rechaza como duplicado.
+- **`impuesto_total` suma todos los tributos** del documento (ver `factura-v1.md`,
+  sección «Impuestos»). Para un tributo concreto, como el IVA que pide la
+  declaración, se usa `fact_factura_impuesto`: una fila por `tributo_codigo`
+  (`01` IVA, `04` INC, `03` ICA, `VAT` en PEPPOL) y `porcentaje`, con su `base` y
+  su `impuesto`. Los `TaxSubtotal` con el mismo tributo y la misma tarifa se suman.
+- **`cuadra`** dice si el `total` del documento cumple la identidad del estándar
+  (`factura-v1.md`, sección «Coherencia»). Es `null` si falta `subtotal`,
+  `impuesto_total` o `total`. Un documento que no cuadra entra igual al modelo:
+  la columna es el aviso, y la CLI cuenta cuántos hay.
+- **`forma_pago` y `medio_pago_codigo`** son los del primer `cac:PaymentMeans`, tal
+  como vienen (ver `factura-v1.md`, sección «Medio de pago»). La deducción del 1 %
+  de compras en Colombia solo aplica a lo pagado con medio electrónico, y este es
+  el campo que la separa.
 - **Lo que no se puede leer no se cuela.** Cada archivo rechazado queda en
   `rechazados.csv` con su motivo, y la CLI termina con código 1.
 
 ## Columnas
 
-Tipos: `int` es entero de 64 bits, `str` texto, `date` fecha, `money` es
+Tipos: `int` es entero de 64 bits, `str` texto, `bool` booleano, `date` fecha, `money` es
 `decimal(38, 6)`. `| null` marca las columnas que pueden venir vacías.
 
 ```yaml
@@ -88,6 +102,9 @@ fact_factura:
   total: money | null
   pagadero: money | null
   archivo: str
+  forma_pago: str | null
+  medio_pago_codigo: str | null
+  cuadra: bool | null
 fact_factura_linea:
   numero_factura: str | null
   tipo_documento: str
@@ -101,4 +118,16 @@ fact_factura_linea:
   precio_unitario: money | null
   importe: money | null
   unidad: str | null
+fact_factura_impuesto:
+  numero_factura: str | null
+  tipo_documento: str
+  signo: int
+  proveedor_key: int
+  fecha_emision_key: int | null
+  moneda: str | null
+  tributo_codigo: str | null
+  tributo_nombre: str | null
+  porcentaje: money | null
+  base: money | null
+  impuesto: money | null
 ```

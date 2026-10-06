@@ -333,6 +333,39 @@ def construir_peppol_invoice_descuento() -> str:
     )
 
 
+# El TaxTotal del INC (`04`, 8 %) que se anade al IVA de _INVOICE. La DIAN emite
+# un TaxTotal por tributo, no uno con varios subtotales.
+_TAX_TOTAL_INC = (
+    '<cac:TaxTotal><cbc:TaxAmount currencyID="COP">80.00</cbc:TaxAmount>'
+    '<cac:TaxSubtotal><cbc:TaxableAmount currencyID="COP">1000.00</cbc:TaxableAmount>'
+    '<cbc:TaxAmount currencyID="COP">80.00</cbc:TaxAmount>'
+    "<cac:TaxCategory><cbc:Percent>8.00</cbc:Percent>"
+    "<cac:TaxScheme><cbc:ID>04</cbc:ID><cbc:Name>INC</cbc:Name></cac:TaxScheme>"
+    "</cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>"
+)
+
+
+def construir_dian_iva_inc() -> str:
+    """Una factura DIAN con dos tributos de documento: IVA 190 + INC 80.
+
+    Cada tributo en su propio `cac:TaxTotal`, como lo emite un restaurante. El
+    total con impuestos es 30000 + 190 + 80 = 30270, y se paga con tarjeta de
+    credito (`48`) de contado (`1`).
+    """
+    factura = (
+        _INVOICE.replace("<cbc:ID>DEE00000001</cbc:ID>", "<cbc:ID>DEE00000002</cbc:ID>")
+        .replace("<cac:LegalMonetaryTotal>", _TAX_TOTAL_INC + "<cac:LegalMonetaryTotal>")
+        .replace(">30190.00</cbc:TaxInclusiveAmount>", ">30270.00</cbc:TaxInclusiveAmount>")
+        .replace(">30190.00</cbc:BaseAmount>", ">30270.00</cbc:BaseAmount>")
+        .replace(">27190.00</cbc:PayableAmount>", ">27270.00</cbc:PayableAmount>")
+        .replace(
+            "<cbc:ID>2</cbc:ID><cbc:PaymentMeansCode>ZZZ</cbc:PaymentMeansCode>",
+            "<cbc:ID>1</cbc:ID><cbc:PaymentMeansCode>48</cbc:PaymentMeansCode>",
+        )
+    )
+    return _adjuntar(factura, "DEE00000002")
+
+
 def _nota_credito_dian() -> str:
     return construir_adjunto_nota("CreditNote")
 
@@ -347,6 +380,7 @@ FIXTURES: dict[str, Callable[[], str]] = {
     "dian_spd_601.xml": construir_adjunto_spd,
     "dian_nota_credito.xml": _nota_credito_dian,
     "dian_nota_debito.xml": _nota_debito_dian,
+    "dian_iva_inc.xml": construir_dian_iva_inc,
     "peppol_invoice.xml": construir_peppol_invoice,
     "peppol_credit_note.xml": construir_peppol_credit_note,
     "peppol_invoice_descuento.xml": construir_peppol_invoice_descuento,

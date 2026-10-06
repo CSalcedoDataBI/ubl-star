@@ -67,6 +67,34 @@ La factura que corrige la nota va en `extras["referencia_factura"]`, con
 
 Añadir `tipo_documento` no rompe v1: es un campo opcional nuevo.
 
+## Impuestos
+
+`impuesto_total` es la **suma** de los `cac:TaxTotal/cbc:TaxAmount` de cabecera
+(hijos directos de la raíz, no los de las líneas). La DIAN emite un `TaxTotal`
+por tributo: una factura con IVA (`01`) e INC (`04`) trae dos, y tomar solo el
+primero dejaría el impuesto subestimado. Las retenciones van en
+`cac:WithholdingTaxTotal` y no entran.
+
+Solo se suman los `TaxTotal` en la moneda del documento. EN 16931 permite un
+segundo `TaxTotal` con el mismo IVA en la moneda de contabilidad (BT-111, con
+otro `currencyID`); sumarlo contaría el impuesto dos veces.
+
+El desglose va en `extras["impuestos"]`: un elemento por `cac:TaxSubtotal`, con
+`codigo` (el `TaxScheme/ID`: `01` IVA, `04` INC, `03` ICA, `VAT` en PEPPOL),
+`nombre`, `porcentaje`, `base` e `impuesto`, tal como vienen.
+
+## Medio de pago
+
+`forma_pago` es `cac:PaymentMeans/cbc:ID` (en la DIAN, `1` contado y `2`
+crédito) y `medio_pago_codigo` es `cbc:PaymentMeansCode` (`10` efectivo, `42`
+consignación, `47` transferencia, `48` tarjeta crédito, `49` tarjeta débito,
+`ZZZ` otro…), los dos tal como vienen: la lista de códigos es de la DIAN y el
+contrato no la traduce. Si el documento trae varios `cac:PaymentMeans`, estos
+campos son los del **primero**, y la lista completa va en
+`extras["medios_pago"]`, cada uno con `forma` y `codigo`.
+
+Los dos son campos opcionales nuevos: no rompen v1.
+
 ## Campos
 
 ```yaml
@@ -87,6 +115,8 @@ invoice:
   cargo_total: money | null
   orden_compra: str | null
   tipo_documento: tipo_documento | null
+  forma_pago: str | null
+  medio_pago_codigo: str | null
   lineas: list[invoice_line]
   extras: dict
 invoice_line:

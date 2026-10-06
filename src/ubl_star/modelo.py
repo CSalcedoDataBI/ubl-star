@@ -65,6 +65,9 @@ TABLAS: dict[str, pa.Schema] = {
             _f("total", _DINERO),
             _f("pagadero", _DINERO),
             _f("archivo", _S, False),
+            _f("forma_pago", _S),
+            _f("medio_pago_codigo", _S),
+            _f("cuadra", pa.bool_()),
         ]
     ),
     "fact_factura_linea": pa.schema(
@@ -81,6 +84,21 @@ TABLAS: dict[str, pa.Schema] = {
             _f("precio_unitario", _DINERO),
             _f("importe", _DINERO),
             _f("unidad", _S),
+        ]
+    ),
+    "fact_factura_impuesto": pa.schema(
+        [
+            _f("numero_factura", _S),
+            _f("tipo_documento", _S, False),
+            _f("signo", _I, False),
+            _f("proveedor_key", _I, False),
+            _f("fecha_emision_key", _I),
+            _f("moneda", _S),
+            _f("tributo_codigo", _S),
+            _f("tributo_nombre", _S),
+            _f("porcentaje", _DINERO),
+            _f("base", _DINERO),
+            _f("impuesto", _DINERO),
         ]
     ),
 }
@@ -144,6 +162,8 @@ def _comprueba_escala(factura: Invoice) -> None:
     ]
     for linea in factura.lineas:
         importes += [linea.cantidad, linea.precio_unitario, linea.importe]
+    for tributo in factura.extras.get("impuestos", []):
+        importes += [tributo["porcentaje"], tributo["base"], tributo["impuesto"]]
     for valor in importes:
         if valor is None:
             continue
@@ -168,7 +188,7 @@ def _orden(valor: str | None) -> tuple[bool, str]:
 
 
 def construir(rutas: Iterable[Path]) -> Modelo:
-    """Lee cada archivo y arma las cinco tablas del esquema estrella."""
+    """Lee cada archivo y arma las tablas del esquema estrella."""
     lista = archivos(rutas)
     rechazados: list[Rechazo] = []
     documentos: list[tuple[Path, Invoice]] = []
@@ -250,8 +270,17 @@ def _tablas(documentos: list[tuple[Path, Invoice]]) -> dict[str, pa.Table]:
                 "total": f.total,
                 "pagadero": f.extras.get("ubl_payable_amount"),
                 "archivo": str(ruta),
+                "forma_pago": f.forma_pago,
+                "medio_pago_codigo": f.medio_pago_codigo,
+                "cuadra": _cuadra(f),
             }
         )
+        for tributo in _por_tributo(f):
+            filas["fact_factura_impuesto"].append(
+                comun
+                | {"proveedor_key": proveedor, "fecha_emision_key": emision, "moneda": f.moneda}
+                | tributo
+            )
         for numero, linea in enumerate(f.lineas, start=1):
             filas["fact_factura_linea"].append(
                 comun
@@ -272,6 +301,41 @@ def _tablas(documentos: list[tuple[Path, Invoice]]) -> dict[str, pa.Table]:
         nombre: pa.Table.from_pylist(filas[nombre], schema=esquema)
         for nombre, esquema in TABLAS.items()
     }
+
+
+def _cuadra(factura: Invoice) -> bool | None:
+    """Si el total cumple la identidad del estandar (ver `factura-v1.md`).
+
+    None cuando falta alguno de los tres importes: no hay nada que comprobar, y
+    decir que cuadra seria afirmar algo que nadie verifico.
+    """
+    if factura.subtotal is None or factura.impuesto_total is None or factura.total is None:
+        return None
+    return not any(p.campo == "total" for p in factura.problemas())
+
+
+def _suma(valores: list[Decimal | None]) -> Decimal | None:
+    """None si falta cualquiera: una suma de solo los presentes pareceria completa."""
+    if any(v is None for v in valores):
+        return None
+    return sum((v for v in valores if v is not None), Decimal(0))
+
+
+def _por_tributo(factura: Invoice) -> list[dict[str, Any]]:
+    """Una fila por tributo y tarifa: los TaxSubtotal iguales se suman."""
+    grupos: dict[tuple[str | None, Decimal | None], list[dict[str, Any]]] = {}
+    for tributo in factura.extras.get("impuestos", []):
+        grupos.setdefault((tributo["codigo"], tributo["porcentaje"]), []).append(tributo)
+    return [
+        {
+            "tributo_codigo": codigo,
+            "tributo_nombre": next((t["nombre"] for t in grupo if t["nombre"]), None),
+            "porcentaje": porcentaje,
+            "base": _suma([t["base"] for t in grupo]),
+            "impuesto": _suma([t["impuesto"] for t in grupo]),
+        }
+        for (codigo, porcentaje), grupo in grupos.items()
+    ]
 
 
 def _calendario(dias: set[date]) -> list[dict[str, Any]]:

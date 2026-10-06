@@ -7,7 +7,7 @@
   "extras": {
     "descuentos": [
       {
-        "base": "30190.00",
+        "base": "30270.00",
         "codigo_razon": "01",
         "es_recargo": false,
         "id": "1",
@@ -23,12 +23,19 @@
         "impuesto": "190.00",
         "nombre": "IVA",
         "porcentaje": "19.00"
+      },
+      {
+        "base": "1000.00",
+        "codigo": "04",
+        "impuesto": "80.00",
+        "nombre": "INC",
+        "porcentaje": "8.00"
       }
     ],
     "medios_pago": [
       {
-        "codigo": "ZZZ",
-        "forma": "2"
+        "codigo": "48",
+        "forma": "1"
       }
     ],
     "notas": {
@@ -36,24 +43,20 @@
       "contrato": "99999999",
       "corte": "17"
     },
-    "referencia_factura": {
-      "cufe": "abc123def456",
-      "fecha_emision": "2026-01-15",
-      "numero_factura": "DEE00000001"
-    },
+    "referencia_factura": null,
     "ubl_allowance_total": "3000.00",
     "ubl_charge_total": "0.00",
     "ubl_customization_id": "601",
-    "ubl_invoice_type_code": null,
-    "ubl_payable_amount": "27190.00",
+    "ubl_invoice_type_code": "60",
+    "ubl_payable_amount": "27270.00",
     "ubl_prepaid_amount": "0.00",
     "ubl_profile_id": "DIAN 2.1: Documento Equivalente SPD",
     "ubl_tax_exclusive_amount": "1000.00"
   },
   "fecha_emision": "2026-01-15",
   "fecha_vencimiento": "2026-02-05",
-  "forma_pago": "2",
-  "impuesto_total": "190.00",
+  "forma_pago": "1",
+  "impuesto_total": "270.00",
   "lineas": [
     {
       "cantidad": "1.00",
@@ -78,13 +81,13 @@
       "precio_unitario": "10000.00"
     }
   ],
-  "medio_pago_codigo": "ZZZ",
+  "medio_pago_codigo": "48",
   "moneda": "COP",
-  "numero_factura": "ND00000001",
+  "numero_factura": "DEE00000002",
   "orden_compra": null,
   "proveedor_id_fiscal": "800111222",
   "proveedor_nombre": "SERVICIOS PUBLICOS EJEMPLO E.S.P.",
   "subtotal": "30000.00",
-  "tipo_documento": "nota_debito",
-  "total": "30190.00"
+  "tipo_documento": "factura",
+  "total": "30270.00"
 }

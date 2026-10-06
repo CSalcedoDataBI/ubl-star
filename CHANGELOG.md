@@ -10,6 +10,25 @@ plugin de Claude Code.
 
 - `release.yml`: re-ejecutar una corrida cuyo tag se creó pero cuyo avance de `stable` falló ya mueve
   `stable`. El paso compara `stable` con el commit y solo avanza (sin forzar) si está detrás.
+- **`impuesto_total` suma todos los tributos.** Antes tomaba solo el primer `cac:TaxTotal`, y la DIAN
+  emite uno por tributo: una factura con IVA + INC salía con el impuesto subestimado, sin aviso. Un
+  segundo `TaxTotal` en la moneda de contabilidad (EN 16931 BT-111) no se suma ([#26]).
+
+### Añadido
+
+- Tabla `fact_factura_impuesto`: una fila por tributo y tarifa de cada documento (IVA `01`, INC `04`,
+  ICA `03`, `VAT`…), con su base y su impuesto. El desglose crudo va en `extras["impuestos"]` ([#26]).
+- Columna `cuadra` en `fact_factura`: dice si el total cumple la identidad del estándar. La CLI cuenta
+  los documentos que no cuadran ([#26]).
+- Campos `forma_pago` y `medio_pago_codigo` (del primer `cac:PaymentMeans`, tal como vienen) en el
+  contrato y en `fact_factura`. Con ellos se separa la base de la deducción del 1 % por pago
+  electrónico. La lista completa va en `extras["medios_pago"]` ([#27]).
+
+### Pendiente para el release
+
+- La skill sigue describiendo la CLI fijada en v0.2.6 y no cambia hasta que se suba la versión. Ese
+  PR debe actualizar el pin, el README («cinco tablas» pasa a seis) y `references/tablas.md` (la tabla nueva, y que el IVA sale de
+  `fact_factura_impuesto` con `tributo_codigo = '01'` y no de `impuesto_total`).
 
 ## [0.2.6] — 2026-10-05
 
@@ -140,3 +159,5 @@ plugin de Claude Code.
 [#22]: https://github.com/CSalcedoDataBI/ubl-star/pull/22
 [#23]: https://github.com/CSalcedoDataBI/ubl-star/pull/23
 [#24]: https://github.com/CSalcedoDataBI/ubl-star/pull/24
+[#26]: https://github.com/CSalcedoDataBI/ubl-star/issues/26
+[#27]: https://github.com/CSalcedoDataBI/ubl-star/issues/27

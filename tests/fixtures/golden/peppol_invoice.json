@@ -6,6 +6,21 @@
   "descuento_total": null,
   "extras": {
     "descuentos": [],
+    "impuestos": [
+      {
+        "base": "1000.00",
+        "codigo": "VAT",
+        "impuesto": "210.00",
+        "nombre": null,
+        "porcentaje": "21"
+      }
+    ],
+    "medios_pago": [
+      {
+        "codigo": "30",
+        "forma": null
+      }
+    ],
     "notas": {},
     "referencia_factura": null,
     "ubl_allowance_total": null,
@@ -19,6 +34,7 @@
   },
   "fecha_emision": "2026-03-02",
   "fecha_vencimiento": "2026-04-01",
+  "forma_pago": null,
   "impuesto_total": "210.00",
   "lineas": [
     {
@@ -44,6 +60,7 @@
       "precio_unitario": "100.00"
     }
   ],
+  "medio_pago_codigo": "30",
   "moneda": "EUR",
   "numero_factura": "INV-0001",
   "orden_compra": "PO-0001",

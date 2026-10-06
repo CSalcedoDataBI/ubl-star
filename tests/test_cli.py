@@ -10,7 +10,7 @@ import pyarrow.parquet as pq
 import pytest
 
 import ubl_star
-from tests.fixtures.generar import FIXTURES
+from tests.fixtures.generar import FIXTURES, construir_peppol_invoice
 from ubl_star.cli import main
 from ubl_star.modelo import TABLAS
 
@@ -94,6 +94,22 @@ def test_sin_documentos_es_un_error_de_uso(
     vacia.mkdir()
     assert main(["model", str(vacia), "--salida", str(tmp_path / "s")]) == 2
     assert "ningun XML ni ZIP" in capsys.readouterr().err
+
+
+def test_avisa_de_los_documentos_que_no_cuadran(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Un descuadre no rechaza (codigo 0), pero se cuenta en la salida."""
+    xml = construir_peppol_invoice().replace(
+        ">1210.00</cbc:TaxInclusiveAmount>", ">1250.00</cbc:TaxInclusiveAmount>"
+    )
+    entrada = tmp_path / "entrada"
+    entrada.mkdir()
+    (entrada / "descuadre.xml").write_text(xml, encoding="utf-8")
+    assert main(["model", str(entrada), "--salida", str(tmp_path / "s")]) == 0
+    salida = capsys.readouterr().out
+    assert "1 documentos no cuadran" in salida
+    assert "1250" not in salida  # solo conteos, nunca importes
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
