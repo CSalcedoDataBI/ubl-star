@@ -8,6 +8,8 @@ plugin de Claude Code.
 
 ### Corregido
 
+- `release.yml`: re-ejecutar una corrida cuyo tag se creó pero cuyo avance de `stable` falló ya mueve
+  `stable`. El paso compara `stable` con el commit y solo avanza (sin forzar) si está detrás.
 - **`impuesto_total` suma todos los tributos.** Antes tomaba solo el primer `cac:TaxTotal`, y la DIAN
   emite uno por tributo: una factura con IVA + INC salía con el impuesto subestimado, sin aviso. Un
   segundo `TaxTotal` en la moneda de contabilidad (EN 16931 BT-111) no se suma ([#26]).

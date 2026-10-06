@@ -97,6 +97,8 @@ revisión nueva cada vez.
 - **No subas la versión mientras otra está en revisión**, salvo que lleve un arreglo de seguridad:
   la sustituiría.
 - `stable` nunca se mueve a mano fuera de un release, y nunca se fuerza (un ruleset lo impide).
+- Si el paso de `stable` falla tras crear el tag, **re-ejecuta la corrida** (Re-run jobs): encuentra el
+  tag en ese mismo commit y vuelve a intentar el avance; si `stable` ya lo contiene, no hace nada.
 
 ## Evals del plugin
 
