@@ -6,8 +6,12 @@ plugin de Claude Code.
 
 ## [Sin publicar]
 
+## [0.2.7] — 2026-10-06
+
 ### Corregido
 
+- La skill describe la tabla nueva: el IVA solo sale de `fact_factura_impuesto`, no de
+  `impuesto_total` ([#26]).
 - `release.yml`: re-ejecutar una corrida cuyo tag se creó pero cuyo avance de `stable` falló ya mueve
   `stable`. El paso compara `stable` con el commit y solo avanza (sin forzar) si está detrás.
 - **`impuesto_total` suma todos los tributos.** Antes tomaba solo el primer `cac:TaxTotal`, y la DIAN
@@ -23,12 +27,6 @@ plugin de Claude Code.
 - Campos `forma_pago` y `medio_pago_codigo` (del primer `cac:PaymentMeans`, tal como vienen) en el
   contrato y en `fact_factura`. Con ellos se separa la base de la deducción del 1 % por pago
   electrónico. La lista completa va en `extras["medios_pago"]` ([#27]).
-
-### Pendiente para el release
-
-- La skill sigue describiendo la CLI fijada en v0.2.6 y no cambia hasta que se suba la versión. Ese
-  PR debe actualizar el pin, el README («cinco tablas» pasa a seis) y `references/tablas.md` (la tabla nueva, y que el IVA sale de
-  `fact_factura_impuesto` con `tributo_codigo = '01'` y no de `impuesto_total`).
 
 ## [0.2.6] — 2026-10-05
 
@@ -128,7 +126,8 @@ plugin de Claude Code.
   `AttachedDocument` y lo mapea al contrato `factura-v1` ([#2], [#3], [#4], [#8]).
 - Barrera anti-contaminación (`.githooks/pre-commit`) y CI en Linux y Windows ([#7], [#10]).
 
-[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.6...HEAD
+[Sin publicar]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/CSalcedoDataBI/ubl-star/compare/v0.2.3...v0.2.4

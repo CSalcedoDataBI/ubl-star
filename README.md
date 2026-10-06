@@ -56,24 +56,25 @@ está — y eso se reporta, no se inventa.
 ## Uso
 
 ```bash
-pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6"
+pip install "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.7"
 ubl-star model ./buzon-de-facturas --salida ./modelo
 ```
 
-`@v0.2.6` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
-no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.6"
+`@v0.2.7` fija la versión; sin él se instala lo último de `main`. Con [`uv`](https://docs.astral.sh/uv/)
+no hace falta instalar nada: `uvx --from "git+https://github.com/CSalcedoDataBI/ubl-star@v0.2.7"
 ubl-star model …`.
 
 `ubl-star model` acepta archivos `.xml` o `.zip`, o carpetas, que recorre enteras. En `--salida`
-escribe cinco tablas y un registro de lo que no pudo leer:
+escribe seis tablas y un registro de lo que no pudo leer:
 
 | Archivo | Qué es |
 |---|---|
 | `dim_proveedor` | un emisor por id fiscal |
 | `dim_item` | un artículo por código y descripción |
 | `dim_fecha` | calendario de años completos (sirve como tabla de fechas de Power BI) |
-| `fact_factura` | un documento: totales, IVA, pagadero, vencimiento |
+| `fact_factura` | un documento: totales, impuestos, pagadero, vencimiento, medio de pago, si cuadra |
 | `fact_factura_linea` | una línea: cantidad, precio, importe |
+| `fact_factura_impuesto` | un tributo de un documento (IVA, INC, ICA…): base e impuesto |
 | `rechazados.csv` | cada archivo que no entró, con el motivo |
 
 `--formato csv` escribe CSV en vez de Parquet. Las notas crédito llevan `signo = -1`, así que el
@@ -156,7 +157,7 @@ Son dos documentos, cada uno anclado por su test:
 
 - [`factura-v1.md`](docs/contrato/factura-v1.md) declara la factura canónica, `invoice` e
   `invoice_line`.
-- [`estrella-v1.md`](docs/contrato/estrella-v1.md) declara las cinco tablas que escribe
+- [`estrella-v1.md`](docs/contrato/estrella-v1.md) declara las seis tablas que escribe
   `ubl-star model`, con sus columnas, tipos, claves y reglas.
 
 ## Contribuir
