@@ -82,6 +82,20 @@ La versión vive en tres sitios que deben coincidir, y `tests/test_plugin.py` fa
 a `main`, `.github/workflows/release.yml` crea el tag `vX.Y.Z` si todavía no existe. Un tag publicado
 no se mueve.
 
+### Releases y el directorio de plugins
+
+El directorio de plugins de claude.ai sigue la rama **`stable`**, no `main`. Revisa cada commit que
+llega a la rama que sigue y lo pone en revisión, en lugar del anterior. `stable` solo avanza cuando
+`release.yml` crea un tag de versión, así que `main` puede recibir commits a diario sin abrir una
+revisión nueva cada vez.
+
+- **Agrupa el trabajo.** Una versión es un ciclo de revisión que se mide en días, no un despliegue.
+- **Prueba antes de subir la versión**, en Claude Code con el plugin local
+  (`claude --plugin-dir plugin`). Lo que hay en claude.ai es siempre lo que el revisor aprobó.
+- **No subas la versión mientras otra está en revisión**, salvo que lleve un arreglo de seguridad:
+  la sustituiría.
+- `stable` nunca se mueve a mano fuera de un release, y nunca se fuerza (un ruleset lo impide).
+
 ## Evals del plugin
 
 `plugin/evals/` mide si la skill se activa y si las respuestas son correctas, con y sin el plugin, sobre las

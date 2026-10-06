@@ -28,6 +28,7 @@ jobs:
           fetch-depth: 0
 
       - name: Crear el tag si falta
+        id: tag
         run: |
           version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           tag="v$version"
@@ -40,3 +41,15 @@ jobs:
           git tag -a "$tag" -m "ubl-star $version"
           git push origin "$tag"
           echo "creado $tag en $GITHUB_SHA"
+          echo "creado=true" >> "$GITHUB_OUTPUT"
+
+      # El directorio de plugins de claude.ai sigue la rama `stable`, no `main`: revisa
+      # cada commit que llega a la rama que sigue, y cada uno sustituye al que estaba en
+      # revision. `stable` avanza aqui y solo aqui, al commit de la version recien creada.
+      # Avance rapido sin forzar (y un ruleset lo impide igualmente): si alguna vez no lo
+      # es, este paso falla en vez de reescribir lo que el revisor ya leyo.
+      - name: Mover stable a la nueva version
+        if: steps.tag.outputs.creado == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PATCH "repos/${{ github.repository }}/git/refs/heads/stable" -f sha="$GITHUB_SHA" -F force=false
