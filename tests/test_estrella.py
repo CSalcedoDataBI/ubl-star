@@ -307,5 +307,24 @@ def test_un_documento_que_no_cuadra_entra_y_se_marca(tmp_path: Path) -> None:
     assert modelo.rechazados == []
 
 
+def test_un_subtotal_sin_importe_no_da_una_suma_parcial() -> None:
+    """Dos TaxSubtotal del mismo tributo y tarifa, uno sin base: la base es None."""
+    from ubl_star.modelo import _por_tributo
+    from ubl_star.schema import Invoice
+
+    iva = {"codigo": "01", "nombre": "IVA", "porcentaje": Decimal("19")}
+    factura = Invoice(
+        extras={
+            "impuestos": [
+                iva | {"base": Decimal("100"), "impuesto": Decimal("19")},
+                iva | {"base": None, "impuesto": Decimal("19")},
+            ]
+        }
+    )
+    (fila,) = _por_tributo(factura)
+    assert fila["base"] is None
+    assert fila["impuesto"] == Decimal("38")
+
+
 def test_todas_las_fixtures_del_buzon_cuadran(modelo: Modelo) -> None:
     assert [f["cuadra"] for f in _filas(modelo, "fact_factura")] == [True] * 5

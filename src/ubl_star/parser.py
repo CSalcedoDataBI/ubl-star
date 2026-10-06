@@ -195,8 +195,12 @@ def _totales_de_impuesto(raiz: Element) -> list[Element]:
 
 
 def _impuesto_total(totales: list[Element]) -> Decimal | None:
-    importes = [i for i in (_dinero(t, "cbc:TaxAmount") for t in totales) if i is not None]
-    return sum(importes, Decimal(0)) if importes else None
+    """La suma, o None si algun TaxTotal no trae su importe: una suma parcial
+    pareceria completa y subestimaria el impuesto sin decirlo."""
+    importes = [_dinero(t, "cbc:TaxAmount") for t in totales]
+    if not importes or any(i is None for i in importes):
+        return None
+    return sum((i for i in importes if i is not None), Decimal(0))
 
 
 def _impuestos(totales: list[Element]) -> list[dict[str, Any]]:

@@ -46,6 +46,15 @@ def test_el_iva_en_moneda_de_contabilidad_no_se_suma_dos_veces() -> None:
     assert factura.cuadra()
 
 
+def test_un_tax_total_sin_importe_deja_el_impuesto_en_none() -> None:
+    """Sumar solo los que traen importe daria un total parcial con cara de completo."""
+    xml = construir_peppol_invoice().replace(
+        "<cac:LegalMonetaryTotal>",
+        "<cac:TaxTotal><cac:TaxSubtotal/></cac:TaxTotal><cac:LegalMonetaryTotal>",
+    )
+    assert parsear(xml).impuesto_total is None
+
+
 def test_cabecera(factura: Invoice) -> None:
     assert factura.tipo_documento == "factura"
     assert factura.numero_factura == "INV-0001"

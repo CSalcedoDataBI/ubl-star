@@ -315,8 +315,10 @@ def _cuadra(factura: Invoice) -> bool | None:
 
 
 def _suma(valores: list[Decimal | None]) -> Decimal | None:
-    presentes = [v for v in valores if v is not None]
-    return sum(presentes, Decimal(0)) if presentes else None
+    """None si falta cualquiera: una suma de solo los presentes pareceria completa."""
+    if any(v is None for v in valores):
+        return None
+    return sum((v for v in valores if v is not None), Decimal(0))
 
 
 def _por_tributo(factura: Invoice) -> list[dict[str, Any]]:
