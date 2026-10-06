@@ -78,9 +78,11 @@ La versión vive en tres sitios que deben coincidir, y `tests/test_plugin.py` fa
 - `plugin/.claude-plugin/plugin.json`;
 - el pin `@vX.Y.Z` en `plugin/skills/leer-facturas-ubl/` (el plugin llama a la CLI fijada a ese tag).
 
-**Cualquier cambio del paquete o del plugin sube la versión** y se anota en `CHANGELOG.md`. Al mergear
-a `main`, `.github/workflows/release.yml` crea el tag `vX.Y.Z` si todavía no existe. Un tag publicado
-no se mueve.
+**Cualquier cambio del paquete o del plugin se anota en `CHANGELOG.md`**, bajo `[Sin publicar]`, y
+sale con la siguiente versión. Mientras no se suba, la skill sigue fijada a la versión anterior y la
+describe a ella: el PR que sube la versión es el que actualiza la skill. Al mergear a `main`,
+`.github/workflows/release.yml` crea el tag `vX.Y.Z` si todavía no existe. Un tag publicado no se
+mueve.
 
 ### Releases y el directorio de plugins
 

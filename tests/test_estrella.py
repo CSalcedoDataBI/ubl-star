@@ -36,6 +36,7 @@ CONTRATO = Path(__file__).resolve().parents[1] / "docs" / "contrato" / "estrella
 _TIPOS: dict[str, pa.DataType] = {
     "int": pa.int64(),
     "str": pa.string(),
+    "bool": pa.bool_(),
     "date": pa.date32(),
     "money": pa.decimal128(38, 6),
 }
@@ -242,3 +243,69 @@ def test_sin_documentos_las_tablas_salen_vacias_con_su_esquema(tmp_path: Path) -
     for tabla in TABLAS:
         assert modelo.tablas[tabla].num_rows == 0
         assert modelo.tablas[tabla].schema.names == list(_declaradas()[tabla])
+
+
+# --- Impuestos, medio de pago y coherencia (#26, #27) ---------------------------
+
+
+def _modelo_de(tmp_path: Path, *nombres: str) -> Modelo:
+    for nombre in nombres:
+        shutil.copy(DIRECTORIO / nombre, tmp_path / nombre)
+    return construir([tmp_path])
+
+
+def test_impuesto_total_suma_todos_los_tributos(tmp_path: Path) -> None:
+    """IVA + INC en dos TaxTotal: el total es la suma y la identidad DIAN cuadra."""
+    modelo = _modelo_de(tmp_path, "dian_iva_inc.xml")
+    (factura,) = _filas(modelo, "fact_factura")
+    assert factura["impuesto_total"] == Decimal("270")
+    assert factura["subtotal"] + factura["impuesto_total"] == factura["total"]
+    assert factura["cuadra"] is True
+
+
+def test_el_desglose_separa_el_iva_del_inc(tmp_path: Path) -> None:
+    modelo = _modelo_de(tmp_path, "dian_iva_inc.xml")
+    tributos = {f["tributo_codigo"]: f for f in _filas(modelo, "fact_factura_impuesto")}
+    assert set(tributos) == {"01", "04"}
+    assert tributos["01"]["tributo_nombre"] == "IVA"
+    assert tributos["01"]["impuesto"] == Decimal("190")
+    assert tributos["01"]["porcentaje"] == Decimal("19")
+    assert tributos["04"]["impuesto"] == Decimal("80")
+    assert tributos["04"]["base"] == Decimal("1000")
+    assert all(f["signo"] == 1 and f["proveedor_key"] == 1 for f in tributos.values())
+
+
+def test_el_desglose_de_una_nota_credito_resta(modelo: Modelo) -> None:
+    filas = _filas(modelo, "fact_factura_impuesto")
+    neto = sum((f["impuesto"] * f["signo"] for f in filas if f["moneda"] == "COP"), Decimal(0))
+    # Factura 190 - nota credito 190 + nota debito 190.
+    assert neto == Decimal("190")
+    assert len(filas) == 5  # un tributo por documento en el buzon
+
+
+def test_el_medio_de_pago_llega_a_la_tabla(tmp_path: Path) -> None:
+    modelo = _modelo_de(tmp_path, "dian_iva_inc.xml", "dian_spd_601.xml", "peppol_invoice.xml")
+    pagos = {
+        f["numero_factura"]: (f["forma_pago"], f["medio_pago_codigo"])
+        for f in _filas(modelo, "fact_factura")
+    }
+    assert pagos["DEE00000002"] == ("1", "48")
+    assert pagos["DEE00000001"] == ("2", "ZZZ")
+    # PEPPOL no usa cbc:ID en PaymentMeans: la forma no esta y no se inventa.
+    assert pagos["INV-0001"] == (None, "30")
+
+
+def test_un_documento_que_no_cuadra_entra_y_se_marca(tmp_path: Path) -> None:
+    """El caso del issue: un total que no es subtotal + impuestos no pasa en silencio."""
+    xml = construir_peppol_invoice().replace(
+        ">1210.00</cbc:TaxInclusiveAmount>", ">1250.00</cbc:TaxInclusiveAmount>"
+    )
+    (tmp_path / "descuadre.xml").write_text(xml, encoding="utf-8")
+    modelo = construir([tmp_path])
+    (factura,) = _filas(modelo, "fact_factura")
+    assert factura["cuadra"] is False
+    assert modelo.rechazados == []
+
+
+def test_todas_las_fixtures_del_buzon_cuadran(modelo: Modelo) -> None:
+    assert [f["cuadra"] for f in _filas(modelo, "fact_factura")] == [True] * 5
