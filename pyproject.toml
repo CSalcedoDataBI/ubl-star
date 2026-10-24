@@ -9,7 +9,7 @@ description = "De factura electronica UBL 2.1 a hechos listos para analizar."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Cristobal Salcedo", email = "support@pesanteanalytics.com" }]
+authors = [{ name = "Cristobal Salcedo", email = "contacto@csalcedodatabi.com" }]
 keywords = ["invoice", "ubl", "dian", "peppol", "star-schema", "parquet"]
 
 # Solo licencias permisivas. Nada AGPL/GPL.

@@ -163,3 +163,26 @@ jobs:
           fi
           git restore --staged plugin/.claude-plugin/captura.png && rm plugin/.claude-plugin/captura.png
           echo "OK: solo icon.png esta exceptuado"
+
+  completo:
+    # El unico check que exige el ruleset de main. Los nombres de la matriz se
+    # generan de sus variables: si la matriz cambia, un check requerido por
+    # nombre deja de reportar y la PR espera para siempre. Este nombre es fijo.
+    # `always()` para que reporte tambien cuando otro job falla: sin el, este
+    # job se salta, y un job saltado cuenta como exito para el ruleset.
+    name: CI completo
+    if: always()
+    needs: [test, plugin, hook]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Todos los jobs en verde
+        run: |
+          echo "test=${{ needs.test.result }} plugin=${{ needs.plugin.result }} hook=${{ needs.hook.result }}"
+          for r in "${{ needs.test.result }}" "${{ needs.plugin.result }}" "${{ needs.hook.result }}"; do
+            if [ "$r" != "success" ]; then
+              echo "FALLO: un job requerido termino en '$r'"
+              exit 1
+            fi
+          done
