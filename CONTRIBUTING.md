@@ -40,8 +40,9 @@ python -m pytest -q --cov          # falla por debajo del 90 % de cobertura (con
 ```
 
 El CI además valida el plugin con `claude plugin validate --strict` y comprueba que el hook sea
-ejecutable y bloquee de verdad. `main` está protegida: solo entra por PR, con todos los checks en verde
-y la rama al día, y se mergea con squash.
+ejecutable y bloquee de verdad. `main` está protegida: solo entra por PR, con el check `CI completo` en
+verde (agrupa todos los demás) y la rama al día, y se mergea con squash. Los PR los revisa y fusiona
+el experto del repo (`.claude/agents/experto.md`) contra [FICHA.md](FICHA.md).
 
 ## Cómo se trabaja un cambio
 
