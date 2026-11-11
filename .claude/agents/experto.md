@@ -35,8 +35,44 @@ rutas locales de disco ni datos de workspaces o de facturas reales. Si el diff l
    pasa.
 4. **Cumple el estándar:** si tocó la skill, sigue las buenas prácticas de skills; si tocó el
    plugin, `claude plugin validate --strict` en verde (lo corre el job `plugin de Claude Code`).
-5. **Revisión limpia:** lees el diff entero; rondas hasta que una no encuentre nada; registras la
-   revisión en el PR sobre el último commit. Una segunda opinión externa si responde; nunca bloquea.
+5. **Revisión limpia:** **clasifícalo primero** (regla del panel del plugin factory):
+   `revisores.ps1 clase -Pr <n> -Repo <owner>/<repo>` imprime una línea; ponla en el PR (cuerpo o
+   comentario). Un **cambio pequeño** no lleva pre-flight ni panel: lees el diff entero contra FICHA con
+   el check de pruebas requerido en verde, y esa es la revisión. Cualquier otro, o ante la duda, lleva el
+   panel.
+   Para el panel, lees el diff entero y juntas los veredictos del **panel de cuatro revisores**
+   (`/factory:review`: seguridad, UX, UI y código, en paralelo y con contexto limpio), tras el pre-flight
+   del constructor (paso 0 de `/factory:review`: un agente, UX primero).
+   **Una sola ronda de revisión** (one review round): registras la revisión en el PR sobre el último
+   commit. Una segunda opinión externa si responde; nunca bloquea.
+   **Con el OK visual de Cristóbal** (web, PBIP, informe) citado en el PR sobre su head: no hay más rondas
+   de panel; haces una pasada sobre lo que él no puede ver (secretos, datos privados o de facturas reales,
+   build y pruebas en verde) y fusionas.
+
+## Reunir los veredictos
+
+```mermaid
+flowchart LR
+    C{revisores.ps1 clase} -- cambio pequeño --> SC[Diff entero vs FICHA<br/>check de pruebas verde] --> F
+    C -- full --> P
+    P[Panel · 4 veredictos<br/>ronda 1, la única completa] --> J{revisores.ps1 juntar}
+    J -- FAIL bloqueante --> E[arreglo: un commit;<br/>la ronda 2 revisa solo<br/>ese punto] --> J2{juntar -Ronda 2}
+    J2 -- sigue bloqueante --> S[stop: sin tercera pasada,<br/>no fusionar, devolver]
+    J2 -- arreglado --> K
+    J -- falta uno --> R[Repetir ese revisor]
+    J -- sin FAIL bloqueante --> K[Evidencia al PR<br/>+ regla de riesgo] --> M[Menores: revisar solo<br/>el commit de arreglo<br/>en el nuevo head, o un issue] --> F[Fusionar]
+```
+
+- **Un `FAIL` menor nunca abre una ronda:** el especialista arregla lo menor en un commit y tú revisas solo
+  ese commit en el nuevo head (sin ronda nueva), o cada punto va como issue de seguimiento; luego fusionas.
+- **Un `FAIL` bloqueante** (seguridad, un secreto, datos de cliente o facturas reales, build o pruebas
+  rotas, pérdida de datos): desenlace *corregir*. La lista que imprime `juntar` va como comentario del PR
+  al especialista, arreglada en un commit; la ronda 2 es **una re-comprobación dirigida** de esos puntos
+  por los revisores que los marcaron. Si sigue bloqueante: desenlace *stop*. **Nunca hay tercera
+  pasada:** no fusionas y devuelves el PR con la lista.
+- **Sin `FAIL` bloqueante** (*listo*): la tabla de `evidence.md` va al cuerpo del PR, con el nivel de la
+  regla de riesgo. Los `NOT EVALUATED` van con su motivo; nunca cuentan como aprobado.
+- Si dos revisores se contradicen, decides tú y dejas escrito por qué en el PR.
 
 ## Desenlaces
 
